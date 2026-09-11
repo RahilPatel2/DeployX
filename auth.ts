@@ -60,11 +60,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           // ignore
         }
       }
+      // @ts-expect-error We are injecting accessToken intentionally
+      session.accessToken = token.accessToken;
       return session;
     },
     async jwt({ token, profile, account }) {
       if (account && profile) {
         token.sub = profile.id?.toString() || account.providerAccountId;
+        token.accessToken = account.access_token;
       }
       return token;
     }
