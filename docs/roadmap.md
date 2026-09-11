@@ -3,7 +3,7 @@
 ## Phases
 - [x] PHASE 0: Repository inspection and plan
 - [x] PHASE 1: Foundation (Next.js, Tailwind, component system)
-- [ ] PHASE 2: Database (Schema, migrations, Supabase)
+- [x] PHASE 2: Database (Schema, migrations, Supabase)
 - [ ] PHASE 3: Authentication (GitHub OAuth)
 - [ ] PHASE 4: Dashboard (UI layout)
 - [ ] PHASE 5: GitHub Integration (Repository listing, import)
