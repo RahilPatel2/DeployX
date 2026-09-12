@@ -10,7 +10,7 @@
 - [x] PHASE 6: Project Configuration (Framework detection, settings)
 - [x] PHASE 7: Deployment System (Provider abstraction, state engine)
 - [x] PHASE 8: Build Logs (Terminal UI, streaming)
-- [ ] PHASE 9: Webhooks (Automatic deployments)
+- [x] PHASE 9: Webhooks (Automatic deployments)
 - [ ] PHASE 10: Preview Deployments
 - [ ] PHASE 11: Rollbacks
 - [ ] PHASE 12: Environment Variables
