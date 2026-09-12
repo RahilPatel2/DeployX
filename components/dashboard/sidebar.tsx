@@ -88,10 +88,8 @@ export function Sidebar() {
     <>
       <div className="md:hidden flex items-center p-4 w-full border-b bg-background">
         <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="md:hidden">
-              <Menu className="h-5 w-5" />
-            </Button>
+          <SheetTrigger render={<Button variant="ghost" size="icon" className="md:hidden" />}>
+            <Menu className="h-5 w-5" />
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-72 bg-sidebar border-r-0">
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, MoreVertical, LayoutGrid, List, Github, GitBranch } from "lucide-react";
+import { Search, Plus, MoreVertical, LayoutGrid, List, GitFork, GitBranch } from "lucide-react";
 import Link from "next/link";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { formatDistanceToNow } from "date-fns";
@@ -53,11 +53,9 @@ export default function ProjectsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Projects</h2>
           <p className="text-muted-foreground mt-1">Manage all your applications and their deployments.</p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/projects/new">
-            <Plus className="mr-2 h-4 w-4" /> New Project
-          </Link>
-        </Button>
+        <Link href="/dashboard/projects/new" className={buttonVariants({ variant: "default" })}>
+          <Plus className="mr-2 h-4 w-4" /> New Project
+        </Link>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
@@ -95,10 +93,8 @@ export default function ProjectsPage() {
                     </div>
                   </div>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
+                    <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" />}>
+                      <MoreVertical className="h-4 w-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem>View Deployments</DropdownMenuItem>
@@ -117,7 +113,7 @@ export default function ProjectsPage() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Repository</span>
                     <span className="flex items-center gap-1 truncate max-w-[150px]">
-                      <Github className="h-3 w-3" />
+                      <GitFork className="h-3 w-3" />
                       {project.repo}
                     </span>
                   </div>

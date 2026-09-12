@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Lock, Globe, GitBranch, Github, Box } from "lucide-react";
+import { Search, Lock, Globe, GitBranch, GitFork, Box } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const mockRepos = [
@@ -49,7 +49,7 @@ export default function NewProjectPage() {
                   >
                     <div className="flex items-center space-x-4">
                       <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                        <Github className="h-4 w-4" />
+                        <GitFork className="h-4 w-4" />
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">

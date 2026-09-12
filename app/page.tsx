@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion, Variants } from "framer-motion";
 import { buttonVariants } from "@/components/ui/button";
-import { ArrowRight, Github, Terminal, Zap, Globe, Shield, Box, Code } from "lucide-react";
+import { ArrowRight, GitFork, Terminal, Zap, Globe, Shield, Box, Code } from "lucide-react";
 import { AuthBackground } from "@/components/auth/AuthBackground";
 
 export default function Home() {
@@ -21,7 +21,7 @@ export default function Home() {
   };
 
   const pipelineSteps = [
-    { name: "Push", icon: Github, color: "text-blue-500" },
+    { name: "Push", icon: GitFork, color: "text-blue-500" },
     { name: "Build", icon: Box, color: "text-purple-500" },
     { name: "Test", icon: Shield, color: "text-emerald-500" },
     { name: "Deploy", icon: Globe, color: "text-primary" }

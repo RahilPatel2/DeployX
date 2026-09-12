@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { User, Shield, Box, Github, Bell, Palette, Settings as SettingsIcon } from "lucide-react";
+import { User, Shield, Box, GitFork, Bell, Palette, Settings as SettingsIcon } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Settings | DeployX",
@@ -12,7 +12,7 @@ const sidebarNavItems = [
   { title: "Appearance", href: "/dashboard/settings/appearance", icon: Palette },
   { title: "Security", href: "/dashboard/settings/security", icon: Shield },
   { title: "Notifications", href: "/dashboard/settings/notifications", icon: Bell },
-  { title: "GitHub", href: "/dashboard/settings/github", icon: Github },
+  { title: "GitHub", href: "/dashboard/settings/github", icon: GitFork },
   { title: "API Keys", href: "/dashboard/settings/api", icon: Box },
 ];
 

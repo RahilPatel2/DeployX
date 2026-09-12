@@ -3,8 +3,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Github, ExternalLink } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { ArrowRight, GitFork, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 const mockDeployments = [
@@ -62,9 +62,9 @@ export function RecentDeploymentsTable() {
           <CardTitle>Recent Deployments</CardTitle>
           <CardDescription>Latest builds across all your projects.</CardDescription>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/dashboard/deployments">View All</Link>
-        </Button>
+        <Link href="/dashboard/deployments" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          View All
+        </Link>
       </CardHeader>
       <CardContent className="p-0 mt-4">
         <Table>
@@ -101,7 +101,7 @@ export function RecentDeploymentsTable() {
                   <div className="flex flex-col">
                     <span className="text-sm truncate max-w-[200px]">{dep.commit}</span>
                     <span className="text-xs text-muted-foreground font-mono flex items-center gap-1">
-                      <Github className="h-3 w-3" />
+                      <GitFork className="h-3 w-3" />
                       {dep.commitHash}
                     </span>
                   </div>

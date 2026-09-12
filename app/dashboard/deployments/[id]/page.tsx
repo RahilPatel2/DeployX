@@ -2,8 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ExternalLink, Github, GitBranch, Clock, Calendar, CheckCircle2 } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { ExternalLink, GitFork, GitBranch, Clock, Calendar, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { LogViewer } from "@/components/deployments/log-viewer";
 
@@ -41,17 +41,15 @@ export default async function DeploymentDetailPage(props: { params: Promise<{ id
               {deployment.branch}
             </span>
             <span className="flex items-center gap-1.5 font-mono text-xs">
-              <Github className="h-3.5 w-3.5" />
+              <GitFork className="h-3.5 w-3.5" />
               {deployment.commitHash}
             </span>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" asChild>
-            <a href={`https://${deployment.url}`} target="_blank" rel="noreferrer">
-              Visit Preview <ExternalLink className="ml-2 h-4 w-4" />
-            </a>
-          </Button>
+          <a href={`https://${deployment.url}`} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "outline" })}>
+            Visit Preview <ExternalLink className="ml-2 h-4 w-4" />
+          </a>
         </div>
       </div>
 

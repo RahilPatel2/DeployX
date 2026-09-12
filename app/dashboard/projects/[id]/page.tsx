@@ -1,10 +1,10 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Github, GitBranch, Globe, ExternalLink, Activity, ArrowUpRight } from "lucide-react";
+import { GitFork, GitBranch, Globe, ExternalLink, Activity, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { DeploymentActivityChart } from "@/components/dashboard/deployment-chart";
 import { RecentDeploymentsTable } from "@/components/dashboard/recent-deployments";
@@ -36,7 +36,7 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground pt-1">
             <span className="flex items-center gap-1.5 hover:text-foreground cursor-pointer transition-colors">
-              <Github className="h-3.5 w-3.5" />
+              <GitFork className="h-3.5 w-3.5" />
               {project.repo}
             </span>
             <span className="flex items-center gap-1.5">
@@ -47,11 +47,9 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" asChild>
-            <a href={`https://${project.url}`} target="_blank" rel="noreferrer">
-              Visit Site <ExternalLink className="ml-2 h-4 w-4" />
-            </a>
-          </Button>
+          <a href={`https://${project.url}`} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "outline" })}>
+            Visit Site <ExternalLink className="ml-2 h-4 w-4" />
+          </a>
           <Button>Deploy</Button>
         </div>
       </div>
@@ -102,7 +100,7 @@ export default async function ProjectPage(props: { params: Promise<{ id: string 
                     </div>
                     <div>
                       <div className="text-muted-foreground mb-1">Commit</div>
-                      <span className="font-mono font-medium flex items-center gap-1"><Github className="h-3 w-3" /> 8f31d2a</span>
+                      <span className="font-mono font-medium flex items-center gap-1"><GitFork className="h-3 w-3" /> 8f31d2a</span>
                     </div>
                   </div>
                 </div>
