@@ -1,6 +1,6 @@
 import { UserButton } from "@/components/auth/user-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Activity, FolderKanban, Globe, GitBranch } from "lucide-react";
 import Link from "next/link";
 
@@ -74,9 +74,9 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground max-w-[250px]">
                   Connect a repository and trigger a deployment to see activity here.
                 </p>
-                <Button className="mt-4" asChild>
-                  <Link href="/dashboard/projects/new">Create Project</Link>
-                </Button>
+                <Link href="/dashboard/projects/new" className={buttonVariants({ className: "mt-4" })}>
+                  Create Project
+                </Link>
               </div>
             </div>
           </CardContent>

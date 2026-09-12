@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { updateProjectSettings } from "./actions";
+import { updateProjectSettings, triggerDeploymentAction } from "./actions";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -27,14 +27,17 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     return <div className="p-8">Unauthorized.</div>;
   }
 
-  // Bind the projectId to the action
+  // Bind the projectId to the actions
   const updateSettingsWithId = updateProjectSettings.bind(null, project.id);
+  const triggerDeploymentWithId = triggerDeploymentAction.bind(null, project.id);
 
   return (
     <div className="flex-1 space-y-6 p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">{project.name}</h2>
-        <Button>Deploy Now</Button>
+        <form action={triggerDeploymentWithId}>
+          <Button type="submit">Deploy Now</Button>
+        </form>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
