@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { CommandPalette } from "@/components/command-palette";
+import { FloatingAssistant } from "@/components/ai/floating-assistant";
 
 export default function DashboardLayout({
   children,
@@ -14,6 +15,7 @@ export default function DashboardLayout({
         <main className="flex-1">{children}</main>
       </div>
       <CommandPalette />
+      <FloatingAssistant />
     </div>
   );
 }
