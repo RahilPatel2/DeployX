@@ -94,7 +94,7 @@ export default function DeploymentDetailPage({ params }: { params: { id: string 
 
       <div className="space-y-4">
         <h3 className="text-xl font-bold tracking-tight">Build Logs</h3>
-        <LogViewer deploymentId={deployment.id} status={deployment.status as any} />
+        <LogViewer deploymentId={deployment.id} status={deployment.status} />
       </div>
     </div>
   );
