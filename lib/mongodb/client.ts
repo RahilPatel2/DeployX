@@ -32,6 +32,8 @@ async function connectToDatabase() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      family: 4, // Force IPv4 to prevent querySrv ECONNREFUSED on Windows
+      dbName: process.env.MONGODB_DB || "deployx_db",
     };
 
     cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
