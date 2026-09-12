@@ -42,3 +42,37 @@ export async function getDeploymentLogsAndStatus(deploymentId: string) {
     logs: logs || []
   };
 }
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+export async function rollbackToDeployment(deploymentId: string, projectId: string, deploymentUrl: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const supabase = getSupabaseServerClient();
+
+  // Verify project ownership
+  const { data: project } = await supabase
+    .from("projects")
+    .select("user_id")
+    .eq("id", projectId)
+    .single();
+
+  if (!project || project.user_id !== session.user.id) {
+    throw new Error("Unauthorized");
+  }
+
+  // Perform rollback (instant URL change)
+  const { error } = await supabase
+    .from("projects")
+    .update({ production_url: deploymentUrl })
+    .eq("id", projectId);
+
+  if (error) {
+    throw new Error("Failed to rollback");
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  redirect(`/dashboard/projects/${projectId}`);
+}
