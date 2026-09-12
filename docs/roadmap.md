@@ -6,7 +6,7 @@ Refactor DeployX to use a premium, highly-animated, MongoDB-backed authenticatio
 ## Phases
 
 - [x] PHASE 1: Architecture and project foundation
-- [ ] PHASE 2: Premium visual design system
+- [x] PHASE 2: Premium visual design system
 - [ ] PHASE 3: Landing page
 - [ ] PHASE 4: Login
 - [ ] PHASE 5: Signup
