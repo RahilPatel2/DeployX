@@ -12,7 +12,7 @@
 - [x] PHASE 8: Build Logs (Terminal UI, streaming)
 - [x] PHASE 9: Webhooks (Automatic deployments)
 - [x] PHASE 10: Preview Deployments
-- [ ] PHASE 11: Rollbacks
+- [x] PHASE 11: Rollbacks
 - [ ] PHASE 12: Environment Variables
 - [ ] PHASE 13: Analytics
 - [ ] PHASE 14: AI Assistant
