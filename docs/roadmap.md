@@ -1,22 +1,24 @@
-# Roadmap
+# DeployX (Premium Authentication) - Development Roadmap
+
+## Project Goal
+Refactor DeployX to use a premium, highly-animated, MongoDB-backed authentication system with custom routing.
 
 ## Phases
-- [x] PHASE 0: Repository inspection and plan
-- [x] PHASE 1: Foundation (Next.js, Tailwind, component system)
-- [x] PHASE 2: Database (Schema, migrations, Supabase)
-- [x] PHASE 3: Authentication (GitHub OAuth)
-- [x] PHASE 4: Dashboard (UI layout)
-- [x] PHASE 5: GitHub Integration (Repository listing, import)
-- [x] PHASE 6: Project Configuration (Framework detection, settings)
-- [x] PHASE 7: Deployment System (Provider abstraction, state engine)
-- [x] PHASE 8: Build Logs (Terminal UI, streaming)
-- [x] PHASE 9: Webhooks (Automatic deployments)
-- [x] PHASE 10: Preview Deployments
-- [x] PHASE 11: Rollbacks
-- [x] PHASE 12: Environment Variables
-- [x] PHASE 13: Analytics
-- [x] PHASE 14: AI Assistant
-- [x] PHASE 15: Security Audit
-- [x] PHASE 16: Performance Audit
-- [x] PHASE 17: UX Polish
-- [x] PHASE 18: Final QA
+
+- [x] PHASE 1: Architecture and project foundation
+- [ ] PHASE 2: Premium visual design system
+- [ ] PHASE 3: Landing page
+- [ ] PHASE 4: Login
+- [ ] PHASE 5: Signup
+- [ ] PHASE 6: MongoDB integration
+- [ ] PHASE 7: Secure authentication/session
+- [ ] PHASE 8: Forgot/reset password
+- [ ] PHASE 9: Email verification architecture
+- [ ] PHASE 10: Protected dashboard
+- [ ] PHASE 11: Animation polish
+- [ ] PHASE 12: Responsive/mobile optimization
+- [ ] PHASE 13: Security audit
+- [ ] PHASE 14: Testing
+- [ ] PHASE 15: Performance optimization
+- [ ] PHASE 16: Final UI/UX polish
+- [ ] PHASE 17: Documentation
