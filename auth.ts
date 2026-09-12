@@ -36,8 +36,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             console.error("Error upserting user during sign in:", error);
             // We might still want to let them sign in, or fail. For now, log the error and allow.
           }
-        } catch (e) {
-          console.error("Failed to sync user with database:", e);
+        } catch (error) {
+          console.error("Failed to sync user with database:", error);
         }
       }
       return true;
@@ -56,7 +56,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           if (data && !error) {
             session.user.id = data.id; // Our internal UUID
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
       }

@@ -18,7 +18,7 @@ export function EnvVars({ projectId, envVars }: { projectId: string; envVars: En
   const [loading, setLoading] = useState(false);
 
   // Helper to partially mask the base64 string
-  const maskValue = (_val: string) => {
+  const maskValue = () => {
     return "••••••••••••••••";
   };
 
@@ -43,7 +43,7 @@ export function EnvVars({ projectId, envVars }: { projectId: string; envVars: En
               {envVars.map((v) => (
                 <tr key={v.id} className="border-b last:border-0">
                   <td className="px-4 py-3 font-mono">{v.key}</td>
-                  <td className="px-4 py-3 font-mono text-muted-foreground">{maskValue(v.encrypted_value)}</td>
+                  <td className="px-4 py-3 font-mono text-muted-foreground">{maskValue()}</td>
                   <td className="px-4 py-3 capitalize">{v.environment}</td>
                   <td className="px-4 py-3 text-right">
                     <form action={async () => {
