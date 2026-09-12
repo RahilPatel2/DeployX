@@ -1,6 +1,6 @@
 import { UserButton } from "@/components/auth/user-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Activity, FolderKanban, Globe, GitBranch } from "lucide-react";
 import Link from "next/link";
 
