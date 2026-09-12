@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { User, Shield, Box, GitFork, Bell, Palette, Settings as SettingsIcon } from "lucide-react";
+import { User, Shield, Box, GitFork, Bell, Palette, Settings as SettingsIcon, CreditCard, AlertTriangle } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Settings | DeployX",
@@ -10,10 +10,12 @@ const sidebarNavItems = [
   { title: "General", href: "/dashboard/settings", icon: SettingsIcon },
   { title: "Profile", href: "/dashboard/settings/profile", icon: User },
   { title: "Appearance", href: "/dashboard/settings/appearance", icon: Palette },
+  { title: "Billing", href: "/dashboard/settings/billing", icon: CreditCard },
   { title: "Security", href: "/dashboard/settings/security", icon: Shield },
   { title: "Notifications", href: "/dashboard/settings/notifications", icon: Bell },
   { title: "GitHub", href: "/dashboard/settings/github", icon: GitFork },
   { title: "API Keys", href: "/dashboard/settings/api", icon: Box },
+  { title: "Danger Zone", href: "/dashboard/settings/danger-zone", icon: AlertTriangle },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
