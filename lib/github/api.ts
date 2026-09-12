@@ -30,3 +30,25 @@ export async function getUserRepositories(accessToken: string): Promise<GitHubRe
 
   return res.json();
 }
+
+export async function getRepositoryFile(accessToken: string, owner: string, repo: string, path: string): Promise<string | null> {
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/vnd.github.v3+json",
+    },
+  });
+
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    throw new Error(`GitHub API error: ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  if (data.type === "file" && data.content) {
+    // GitHub API returns base64 encoded content, sometimes with newlines
+    return Buffer.from(data.content, "base64").toString("utf-8");
+  }
+
+  return null;
+}
