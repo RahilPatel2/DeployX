@@ -49,6 +49,7 @@ export function SignupForm() {
       email: "",
       password: "",
       confirmPassword: "",
+      agree: false,
     },
   });
 
