@@ -37,32 +37,32 @@ export async function POST(req: Request) {
 
     const deploymentsTriggered = [];
 
-    // Trigger deployments for projects where the branch matches
+    // Trigger deployments for all branches
     for (const project of projects) {
-      if (project.branch === branch) {
-        // Create deployment record
-        const { data: deployment, error: deployError } = await supabase
-          .from("deployments")
-          .insert({
-            project_id: project.id,
-            commit_sha: commitSha,
-            branch: branch,
-            environment: "production",
-            status: "QUEUED",
-            started_at: new Date().toISOString(),
-          })
-          .select()
-          .single();
+      const environment = project.branch === branch ? "production" : "preview";
 
-        if (deployError || !deployment) {
-          console.error("Failed to create deployment record for webhook", deployError);
-          continue;
-        }
+      // Create deployment record
+      const { data: deployment, error: deployError } = await supabase
+        .from("deployments")
+        .insert({
+          project_id: project.id,
+          commit_sha: commitSha,
+          branch: branch,
+          environment: environment,
+          status: "QUEUED",
+          started_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
-        // Trigger pipeline
-        await deploymentProvider.createDeployment(deployment.id, project.id);
-        deploymentsTriggered.push(deployment.id);
+      if (deployError || !deployment) {
+        console.error("Failed to create deployment record for webhook", deployError);
+        continue;
       }
+
+      // Trigger pipeline
+      await deploymentProvider.createDeployment(deployment.id, project.id);
+      deploymentsTriggered.push(deployment.id);
     }
 
     return NextResponse.json({ 

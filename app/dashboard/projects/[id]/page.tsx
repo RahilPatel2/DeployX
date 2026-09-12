@@ -1,5 +1,6 @@
 import { getSupabaseServerClient } from "@/lib/database/client";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { auth } from "@/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -13,15 +14,22 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   const session = await auth();
   const supabase = getSupabaseServerClient();
 
-  const { data: project, error } = await supabase
+  const { data: project } = await supabase
     .from("projects")
     .select("*")
     .eq("id", resolvedParams.id)
     .single();
 
-  if (error || !project) {
+  if (!project) {
     notFound();
   }
+
+  // Fetch project deployments
+  const { data: projectDeployments } = await supabase
+    .from("deployments")
+    .select("*")
+    .eq("project_id", project.id)
+    .order("created_at", { ascending: false });
 
   if (project.user_id !== session?.user?.id) {
     return <div className="p-8">Unauthorized.</div>;
@@ -43,6 +51,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="deployments">Deployments</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         
@@ -70,6 +79,41 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   <dd className="mt-1 text-sm">{project.status}</dd>
                 </div>
               </dl>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="deployments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Deployments</CardTitle>
+              <CardDescription>History of production and preview deployments.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-md border">
+                {!projectDeployments || projectDeployments.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground">No deployments yet.</div>
+                ) : (
+                  projectDeployments.map((dep) => (
+                    <div key={dep.id} className="flex items-center justify-between p-4 border-b last:border-0 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center space-x-4">
+                        <div>
+                          <Link href={`/dashboard/deployments/${dep.id}`} className="font-semibold hover:underline">
+                            {dep.commit_sha.substring(0, 7)}
+                          </Link>
+                          <div className="flex items-center text-sm text-muted-foreground space-x-4 mt-1">
+                            <span>Branch: {dep.branch}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium">{dep.status}</div>
+                        <div className="text-xs text-muted-foreground capitalize">{dep.environment}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
