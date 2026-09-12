@@ -13,7 +13,7 @@
 - [x] PHASE 9: Webhooks (Automatic deployments)
 - [x] PHASE 10: Preview Deployments
 - [x] PHASE 11: Rollbacks
-- [ ] PHASE 12: Environment Variables
+- [x] PHASE 12: Environment Variables
 - [ ] PHASE 13: Analytics
 - [ ] PHASE 14: AI Assistant
 - [ ] PHASE 15: Security Audit
