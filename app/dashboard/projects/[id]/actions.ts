@@ -75,3 +75,43 @@ export async function triggerDeploymentAction(projectId: string) {
   revalidatePath(`/dashboard/projects/${projectId}`);
   redirect(`/dashboard/deployments/${deployment.id}`);
 }
+
+export async function addEnvironmentVariable(projectId: string, formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const key = formData.get("key") as string;
+  const value = formData.get("value") as string;
+  const environment = formData.get("environment") as string;
+
+  if (!key || !value) throw new Error("Key and value are required");
+
+  const supabase = getSupabaseServerClient();
+
+  const { data: project } = await supabase.from("projects").select("user_id").eq("id", projectId).single();
+  if (!project || project.user_id !== session.user.id) throw new Error("Unauthorized");
+
+  const encrypted_value = Buffer.from(value).toString('base64');
+
+  await supabase.from("environment_variables").insert({
+    project_id: projectId,
+    key,
+    encrypted_value,
+    environment: environment || "all"
+  });
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+}
+
+export async function deleteEnvironmentVariable(projectId: string, varId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const supabase = getSupabaseServerClient();
+  const { data: project } = await supabase.from("projects").select("user_id").eq("id", projectId).single();
+  if (!project || project.user_id !== session.user.id) throw new Error("Unauthorized");
+
+  await supabase.from("environment_variables").delete().eq("id", varId).eq("project_id", projectId);
+  
+  revalidatePath(`/dashboard/projects/${projectId}`);
+}

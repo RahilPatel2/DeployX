@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateProjectSettings, triggerDeploymentAction } from "./actions";
+import { EnvVars } from "@/components/projects/env-vars";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -31,6 +32,13 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     .eq("project_id", project.id)
     .order("created_at", { ascending: false });
 
+  // Fetch environment variables
+  const { data: envVars } = await supabase
+    .from("environment_variables")
+    .select("*")
+    .eq("project_id", project.id)
+    .order("created_at", { ascending: true });
+
   if (project.user_id !== session?.user?.id) {
     return <div className="p-8">Unauthorized.</div>;
   }
@@ -52,6 +60,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="deployments">Deployments</TabsTrigger>
+          <TabsTrigger value="env-vars">Environment Variables</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         
@@ -149,6 +158,20 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <Button type="submit">Save Changes</Button>
               </CardFooter>
             </form>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="env-vars" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Environment Variables</CardTitle>
+              <CardDescription>
+                Securely store secrets and configuration for your deployments.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EnvVars projectId={project.id} envVars={envVars || []} />
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
