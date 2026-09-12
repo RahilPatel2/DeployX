@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -44,16 +46,34 @@ export function LoginForm() {
 
   const rememberValue = watch("remember");
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const onSubmit = async (_data: LoginValues) => {
+  const onSubmit = async (data: LoginValues) => {
     setIsLoading(true);
     setServerError(null);
 
-    // Simulate API call for Phase 4 UI mockup
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: data.identifier,
+          password: data.password,
+          remember: data.remember,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setServerError(result.error || "Incorrect username or password.");
+        setIsLoading(false);
+        return;
+      }
+
+      router.push("/dashboard");
+    } catch {
+      setServerError("Network error. Please try again later.");
       setIsLoading(false);
-      setServerError("Invalid email or password. (MongoDB integration pending Phase 6)");
-    }, 1500);
+    }
   };
 
   const containerVariants: Variants = {

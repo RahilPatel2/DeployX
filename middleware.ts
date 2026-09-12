@@ -1,9 +1,24 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import type { NextRequest } from "next/server";
+import { jwtVerify } from "jose";
 
-export default auth((req) => {
-  const isLoggedIn = !!req.auth;
-  const isAuthPage = req.nextUrl.pathname.startsWith('/login');
+export async function middleware(req: NextRequest) {
+  const sessionCookie = req.cookies.get("session")?.value;
+  let isLoggedIn = false;
+
+  if (sessionCookie) {
+    try {
+      const secretKey = process.env.JWT_SECRET || "default_development_secret_key";
+      const key = new TextEncoder().encode(secretKey);
+      await jwtVerify(sessionCookie, key, { algorithms: ["HS256"] });
+      isLoggedIn = true;
+    } catch {
+      isLoggedIn = false;
+    }
+  }
+
+  const isAuthPage = req.nextUrl.pathname.startsWith('/login') || req.nextUrl.pathname.startsWith('/signup');
+  const isDashboard = req.nextUrl.pathname.startsWith('/dashboard') || req.nextUrl.pathname.startsWith('/settings');
 
   if (isAuthPage) {
     if (isLoggedIn) {
@@ -12,12 +27,12 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  if (!isLoggedIn && req.nextUrl.pathname.startsWith('/dashboard')) {
+  if (!isLoggedIn && isDashboard) {
     return NextResponse.redirect(new URL('/login', req.nextUrl));
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
