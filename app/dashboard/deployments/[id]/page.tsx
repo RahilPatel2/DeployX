@@ -7,7 +7,8 @@ import { ExternalLink, Github, GitBranch, Clock, Calendar, CheckCircle2 } from "
 import Link from "next/link";
 import { LogViewer } from "@/components/deployments/log-viewer";
 
-export default function DeploymentDetailPage({ params }: { params: { id: string } }) {
+export default async function DeploymentDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const deployment = {
     id: params.id,
     project: "portfolio-nextjs",

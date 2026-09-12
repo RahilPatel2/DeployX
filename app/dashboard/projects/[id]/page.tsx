@@ -9,7 +9,8 @@ import Link from "next/link";
 import { DeploymentActivityChart } from "@/components/dashboard/deployment-chart";
 import { RecentDeploymentsTable } from "@/components/dashboard/recent-deployments";
 
-export default function ProjectPage({ params }: { params: { id: string } }) {
+export default async function ProjectPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   // Mock data for the project
   const project = {
     id: params.id,
