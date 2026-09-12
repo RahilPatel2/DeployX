@@ -8,9 +8,10 @@ import { GitFork, GitBranch, Globe, ExternalLink, Activity, ArrowUpRight } from 
 import Link from "next/link";
 import { DeploymentActivityChart } from "@/components/dashboard/deployment-chart";
 import { RecentDeploymentsTable } from "@/components/dashboard/recent-deployments";
+import { use } from "react";
 
-export default async function ProjectPage(props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export default function ProjectPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   // Mock data for the project
   const project = {
     id: params.id,

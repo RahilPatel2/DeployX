@@ -81,9 +81,9 @@ export function LogViewer({ deploymentId, status = "READY" }: { deploymentId: st
               {i + 1}
             </span>
             <span className={`whitespace-pre-wrap ${
-              log.includes('✓') ? 'text-emerald-400' : 
-              log.includes('→') ? 'text-blue-400' : 
-              log.includes('error') ? 'text-red-400' : 'text-gray-300'
+              log?.includes('✓') ? 'text-emerald-400' : 
+              log?.includes('→') ? 'text-blue-400' : 
+              log?.includes('error') ? 'text-red-400' : 'text-gray-300'
             }`}>
               {log}
             </span>

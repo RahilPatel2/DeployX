@@ -6,9 +6,10 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { ExternalLink, GitFork, GitBranch, Clock, Calendar, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { LogViewer } from "@/components/deployments/log-viewer";
+import { use } from "react";
 
-export default async function DeploymentDetailPage(props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+export default function DeploymentDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const deployment = {
     id: params.id,
     project: "portfolio-nextjs",
