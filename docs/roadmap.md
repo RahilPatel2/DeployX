@@ -11,7 +11,7 @@
 - [x] PHASE 7: Deployment System (Provider abstraction, state engine)
 - [x] PHASE 8: Build Logs (Terminal UI, streaming)
 - [x] PHASE 9: Webhooks (Automatic deployments)
-- [ ] PHASE 10: Preview Deployments
+- [x] PHASE 10: Preview Deployments
 - [ ] PHASE 11: Rollbacks
 - [ ] PHASE 12: Environment Variables
 - [ ] PHASE 13: Analytics
