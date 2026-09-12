@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ const signupSchema = z.object({
 type SignupValues = z.infer<typeof signupSchema>;
 
 export function SignupForm() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -68,16 +70,37 @@ export function SignupForm() {
   const strengthLabels = ["Weak", "Fair", "Good", "Strong", "Excellent"];
   const strengthColors = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-emerald-500", "bg-emerald-600"];
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const onSubmit = async (_data: SignupValues) => {
+  const onSubmit = async (data: SignupValues) => {
     setIsLoading(true);
     setServerError(null);
 
-    // Simulate API call for Phase 5 UI mockup
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: data.fullName,
+          username: data.username,
+          email: data.email,
+          password: data.password,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setServerError(result.error || "An error occurred during signup.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Success - we will redirect to /login or /dashboard in Phase 7
+      // For now, redirect to /login
+      router.push("/login");
+    } catch {
+      setServerError("Network error. Please try again later.");
       setIsLoading(false);
-      setServerError("MongoDB integration pending Phase 6.");
-    }, 1500);
+    }
   };
 
   const containerVariants: Variants = {

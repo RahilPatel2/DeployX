@@ -10,7 +10,7 @@ Refactor DeployX to use a premium, highly-animated, MongoDB-backed authenticatio
 - [x] PHASE 3: Landing page
 - [x] PHASE 4: Login
 - [x] PHASE 5: Signup
-- [ ] PHASE 6: MongoDB integration
+- [x] PHASE 6: MongoDB integration
 - [ ] PHASE 7: Secure authentication/session
 - [ ] PHASE 8: Forgot/reset password
 - [ ] PHASE 9: Email verification architecture
