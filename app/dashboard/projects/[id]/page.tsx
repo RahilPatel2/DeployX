@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateProjectSettings, triggerDeploymentAction } from "./actions";
 import { EnvVars } from "@/components/projects/env-vars";
+import { Analytics } from "@/components/projects/analytics";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -61,6 +62,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="deployments">Deployments</TabsTrigger>
           <TabsTrigger value="env-vars">Environment Variables</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         
@@ -173,6 +175,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <EnvVars projectId={project.id} envVars={envVars || []} />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <Analytics projectId={project.id} />
         </TabsContent>
       </Tabs>
     </div>
