@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -15,19 +14,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { User, Settings, CreditCard, LogOut, Code } from "lucide-react";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function UserButton() {
   const router = useRouter();
-  const [user, setUser] = useState<{name?: string, username?: string, email?: string} | null>(null);
+  const { data } = useSWR("/api/auth/profile", fetcher);
 
-  useEffect(() => {
-    fetch("/api/auth/session")
-      .then(res => res.json())
-      .then(data => {
-        if (data.user) setUser(data.user);
-      })
-      .catch(() => {});
-  }, []);
+  const user = data?.user;
 
   if (!user) return null;
 
@@ -44,7 +39,7 @@ export function UserButton() {
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="ghost" className="relative h-8 w-8 rounded-full" />}>
         <Avatar className="h-8 w-8 border border-border/50 transition-opacity hover:opacity-80">
-          <AvatarImage src="" alt={displayName} />
+          <AvatarImage src={user.avatar || ""} alt={displayName} />
           <AvatarFallback className="bg-primary/10 text-primary font-medium">{initial}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>

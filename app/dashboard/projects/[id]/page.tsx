@@ -4,25 +4,58 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GitFork, GitBranch, Globe, ExternalLink, Activity, ArrowUpRight } from "lucide-react";
+import { GitFork, GitBranch, Globe, ExternalLink, Activity, ArrowUpRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { DeploymentActivityChart } from "@/components/dashboard/deployment-chart";
 import { RecentDeploymentsTable } from "@/components/dashboard/recent-deployments";
-import { use } from "react";
+import { use, useState } from "react";
+import useSWR from "swr";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function ProjectPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
-  // Mock data for the project
-  const project = {
-    id: params.id,
-    name: "portfolio-nextjs",
-    framework: "Next.js",
-    status: "ready",
-    repo: "RahilPatel2/portfolio",
-    branch: "main",
-    url: "portfolio-nextjs.deployx.app",
-    lastDeploy: "42s",
+  const router = useRouter();
+  const [deploying, setDeploying] = useState(false);
+
+  const { data, error, isLoading } = useSWR(`/api/projects/${params.id}`, fetcher);
+  
+  const handleDeploy = async () => {
+    setDeploying(true);
+    try {
+      const res = await fetch("/api/deployments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: params.id }),
+      });
+
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to trigger deployment");
+      }
+
+      const d = await res.json();
+      toast.success("Deployment started successfully");
+      router.push(`/dashboard/deployments/${d.deployment._id}`);
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong");
+    } finally {
+      setDeploying(false);
+    }
   };
+
+  if (isLoading) {
+    return <div className="p-8 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (error || !data?.project) {
+    return <div className="p-8 text-destructive text-center">Failed to load project details.</div>;
+  }
+
+  const project = data.project;
 
   return (
     <div className="flex-1 space-y-6 p-8 pt-6 max-w-7xl mx-auto w-full">
@@ -32,13 +65,13 @@ export default function ProjectPage(props: { params: Promise<{ id: string }> }) 
             <h2 className="text-3xl font-bold tracking-tight">{project.name}</h2>
             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
-              Production
+              Connected
             </Badge>
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground pt-1">
             <span className="flex items-center gap-1.5 hover:text-foreground cursor-pointer transition-colors">
               <GitFork className="h-3.5 w-3.5" />
-              {project.repo}
+              {project.repository}
             </span>
             <span className="flex items-center gap-1.5">
               <GitBranch className="h-3.5 w-3.5" />
@@ -48,10 +81,15 @@ export default function ProjectPage(props: { params: Promise<{ id: string }> }) 
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <a href={`https://${project.url}`} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "outline" })}>
-            Visit Site <ExternalLink className="ml-2 h-4 w-4" />
-          </a>
-          <Button>Deploy</Button>
+          {project.productionUrl && (
+            <a href={`https://${project.productionUrl}`} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "outline" })}>
+              Visit Site <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
+          )}
+          <Button onClick={handleDeploy} disabled={deploying}>
+            {deploying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Deploy
+          </Button>
         </div>
       </div>
 
@@ -81,27 +119,31 @@ export default function ProjectPage(props: { params: Promise<{ id: string }> }) 
                       </span>
                       <span className="font-medium text-emerald-500">Ready</span>
                     </div>
-                    <span className="text-sm text-muted-foreground">{project.lastDeploy} ago</span>
+                    <span className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(project.updatedAt))} ago</span>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
                     <div>
                       <div className="text-muted-foreground mb-1">Domain</div>
-                      <a href={`https://${project.url}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 font-medium hover:underline">
-                        {project.url} <ArrowUpRight className="h-3 w-3" />
-                      </a>
+                      {project.productionUrl ? (
+                        <a href={`https://${project.productionUrl}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 font-medium hover:underline">
+                          {project.productionUrl} <ArrowUpRight className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="font-medium">Not deployed yet</span>
+                      )}
                     </div>
                     <div>
-                      <div className="text-muted-foreground mb-1">State</div>
-                      <span className="font-medium">Published</span>
+                      <div className="text-muted-foreground mb-1">Provider</div>
+                      <span className="font-medium">Cloudflare Pages</span>
                     </div>
                     <div>
                       <div className="text-muted-foreground mb-1">Branch</div>
                       <span className="font-medium flex items-center gap-1"><GitBranch className="h-3 w-3" /> {project.branch}</span>
                     </div>
                     <div>
-                      <div className="text-muted-foreground mb-1">Commit</div>
-                      <span className="font-mono font-medium flex items-center gap-1"><GitFork className="h-3 w-3" /> 8f31d2a</span>
+                      <div className="text-muted-foreground mb-1">Framework</div>
+                      <span className="font-mono font-medium flex items-center gap-1"><GitFork className="h-3 w-3" /> {project.framework}</span>
                     </div>
                   </div>
                 </div>
@@ -113,9 +155,9 @@ export default function ProjectPage(props: { params: Promise<{ id: string }> }) 
                 <CardTitle className="text-lg">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
-                <Button variant="secondary" className="w-full justify-start">View Build Logs</Button>
-                <Button variant="secondary" className="w-full justify-start">Manage Domains</Button>
-                <Button variant="secondary" className="w-full justify-start">Environment Variables</Button>
+                <Button variant="secondary" className="w-full justify-start" onClick={() => router.push(`/dashboard/deployments`)}>View Build Logs</Button>
+                <Button variant="secondary" className="w-full justify-start" onClick={() => router.push(`/dashboard/domains`)}>Manage Domains</Button>
+                <Button variant="secondary" className="w-full justify-start" onClick={() => router.push(`/dashboard/environment-variables`)}>Environment Variables</Button>
               </CardContent>
             </Card>
           </div>

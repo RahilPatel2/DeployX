@@ -3,8 +3,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Lock, Globe, GitBranch, GitFork, Box } from "lucide-react";
+import { Search, Lock, Globe, GitBranch, GitFork, Box, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const mockRepos = [
   { id: 1, full_name: "RahilPatel2/portfolio", name: "portfolio", private: false, language: "TypeScript", default_branch: "main", updated_at: new Date(Date.now() - 1000 * 60 * 60 * 2) },
@@ -13,6 +16,40 @@ const mockRepos = [
 ];
 
 export default function NewProjectPage() {
+  const [importingId, setImportingId] = useState<number | null>(null);
+  const router = useRouter();
+
+  const handleImport = async (repo: typeof mockRepos[0]) => {
+    setImportingId(repo.id);
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: repo.name,
+          repository: repo.full_name,
+          branch: repo.default_branch,
+          framework: "Next.js", // We auto-detect this in a real system
+          buildCommand: "npm run build",
+          outputDirectory: ".next",
+          installCommand: "npm install",
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to create project");
+      }
+
+      const data = await res.json();
+      toast.success("Project imported successfully");
+      router.push(`/dashboard/projects/${data.project._id}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("An error occurred while importing the project");
+      setImportingId(null);
+    }
+  };
+
   return (
     <div className="flex-1 space-y-6 p-8 pt-6 max-w-5xl mx-auto w-full">
       <div className="flex flex-col space-y-2">
@@ -78,8 +115,20 @@ export default function NewProjectPage() {
                       </div>
                     </div>
                     
-                    <Button size="sm" variant="secondary">
-                      Import
+                    <Button 
+                      size="sm" 
+                      variant="secondary" 
+                      onClick={() => handleImport(repo)}
+                      disabled={importingId !== null}
+                    >
+                      {importingId === repo.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        "Import"
+                      )}
                     </Button>
                   </div>
                 ))}

@@ -44,6 +44,14 @@ export async function getSession() {
   }
 }
 
+export async function requireAuth() {
+  const session = await getSession();
+  if (!session || !session.userId) {
+    throw new Error("Unauthorized");
+  }
+  return session.userId as string;
+}
+
 export async function clearSession() {
   const cookieStore = await cookies();
   cookieStore.set("session", "", {

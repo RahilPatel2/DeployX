@@ -28,7 +28,10 @@ export async function proxy(req: NextRequest) {
   }
 
   if (!isLoggedIn && isDashboard) {
-    return NextResponse.redirect(new URL('/login', req.nextUrl));
+    const redirectUrl = new URL('/login', req.nextUrl);
+    const originalPath = req.nextUrl.pathname + (req.nextUrl.search ? req.nextUrl.search : '');
+    redirectUrl.searchParams.set('redirect', originalPath);
+    return NextResponse.redirect(redirectUrl);
   }
 
   return NextResponse.next();

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,22 +18,41 @@ import { cn } from "@/lib/utils";
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
-  username: z.string().min(3, "Username must be at least 3 characters").regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers, and underscores allowed"),
+  username: z.string().min(3, "Username must be at least 3 characters").regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, underscores, and dashes"),
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters").regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"),
   confirmPassword: z.string(),
-  agree: z.boolean().refine((val) => val === true, "You must agree to the Terms & Privacy Policy"),
+  agree: z.boolean().refine((val) => val === true, {
+    message: "You must agree to the Terms & Privacy Policy",
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
+  message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
 type SignupValues = z.infer<typeof signupSchema>;
 
-export function SignupForm() {
+const strengthLabels = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
+const strengthColors = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-emerald-400", "bg-emerald-600"];
+
+function checkPasswordStrength(password: string): number {
+  let score = 0;
+  if (!password) return 0;
+  if (password.length >= 8) score += 1;
+  if (password.match(/[A-Z]/)) score += 1;
+  if (password.match(/[a-z]/)) score += 1;
+  if (password.match(/[0-9]/)) score += 1;
+  if (password.match(/[^a-zA-Z0-9]/)) score += 1;
+  return Math.min(4, Math.floor(score / 1.25));
+}
+
+function SignupFormInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const redirectUrl = searchParams.get('redirect') || "/dashboard";
 
   const {
     register,
@@ -55,21 +74,7 @@ export function SignupForm() {
 
   const passwordValue = watch("password");
   const agreeValue = watch("agree");
-
-  // Simple password strength calculation
-  const strength = useMemo(() => {
-    let score = 0;
-    if (!passwordValue) return 0;
-    if (passwordValue.length >= 8) score += 1;
-    if (passwordValue.length >= 12) score += 1;
-    if (/[A-Z]/.test(passwordValue)) score += 1;
-    if (/[0-9]/.test(passwordValue)) score += 1;
-    if (/[^A-Za-z0-9]/.test(passwordValue)) score += 1;
-    return Math.min(4, Math.ceil(score * 0.8)); // 0 to 4
-  }, [passwordValue]);
-
-  const strengthLabels = ["Weak", "Fair", "Good", "Strong", "Excellent"];
-  const strengthColors = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-emerald-500", "bg-emerald-600"];
+  const strength = checkPasswordStrength(passwordValue);
 
   const onSubmit = async (data: SignupValues) => {
     setIsLoading(true);
@@ -80,7 +85,7 @@ export function SignupForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName: data.fullName,
+          name: data.fullName,
           username: data.username,
           email: data.email,
           password: data.password,
@@ -95,9 +100,8 @@ export function SignupForm() {
         return;
       }
 
-      // Success - we will redirect to /login or /dashboard in Phase 7
-      // For now, redirect to /login
-      router.push("/login");
+      router.push(redirectUrl);
+      router.refresh();
     } catch {
       setServerError("Network error. Please try again later.");
       setIsLoading(false);
@@ -297,5 +301,13 @@ export function SignupForm() {
         </Link>
       </motion.div>
     </motion.div>
+  );
+}
+
+export function SignupForm() {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
+      <SignupFormInner />
+    </Suspense>
   );
 }

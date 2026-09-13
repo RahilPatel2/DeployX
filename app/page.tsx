@@ -74,7 +74,7 @@ export default function Home() {
             </motion.p>
             
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 w-full sm:w-auto">
-              <Link href="/signup" className={buttonVariants({ size: "lg", className: "w-full sm:w-auto h-14 px-8 text-base font-semibold rounded-full shadow-lg hover:shadow-primary/25 transition-all" })}>
+              <Link href="/dashboard/projects/new" className={buttonVariants({ size: "lg", className: "w-full sm:w-auto h-14 px-8 text-base font-semibold rounded-full shadow-lg hover:shadow-primary/25 transition-all" })}>
                 Start Deploying <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
               <Link href="#demo" className={buttonVariants({ variant: "outline", size: "lg", className: "w-full sm:w-auto h-14 px-8 text-base font-semibold rounded-full bg-background/50 backdrop-blur-md border-border/50 hover:bg-muted/50 transition-all" })}>

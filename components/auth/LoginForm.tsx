@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -24,10 +24,13 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-export function LoginForm() {
+function LoginFormInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const redirectUrl = searchParams.get('redirect') || "/dashboard";
 
   const {
     register,
@@ -69,7 +72,8 @@ export function LoginForm() {
         return;
       }
 
-      router.push("/dashboard");
+      router.push(redirectUrl);
+      router.refresh(); // Force a full navigation refresh for SWR/Middleware state
     } catch {
       setServerError("Network error. Please try again later.");
       setIsLoading(false);
@@ -205,5 +209,13 @@ export function LoginForm() {
         </Link>
       </motion.div>
     </motion.div>
+  );
+}
+
+export function LoginForm() {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>}>
+      <LoginFormInner />
+    </Suspense>
   );
 }
