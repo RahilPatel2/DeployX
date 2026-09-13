@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const sessionCookie = req.cookies.get("session")?.value;
   let isLoggedIn = false;
 
