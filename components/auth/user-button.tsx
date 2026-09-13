@@ -27,9 +27,13 @@ export function UserButton() {
   if (!user) return null;
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/");
-    router.refresh();
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (e) {
+      console.error("Logout error", e);
+    } finally {
+      window.location.href = "/login";
+    }
   };
 
   const displayName = user.name || user.username || "User";

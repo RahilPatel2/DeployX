@@ -32,7 +32,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { name, email, avatar } = body;
+    const { name, email, avatar, phone, bio } = body;
 
     await connectToDatabase();
 
@@ -41,9 +41,11 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (name) user.name = name;
-    if (email) user.email = email;
-    if (avatar) user.avatar = avatar;
+    if (name !== undefined) user.name = name;
+    if (email !== undefined) user.email = email;
+    if (avatar !== undefined) user.avatar = avatar;
+    if (phone !== undefined) user.phone = phone;
+    if (bio !== undefined) user.bio = bio;
 
     await user.save();
 

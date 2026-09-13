@@ -11,12 +11,22 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import useSWR from "swr";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || "Failed to fetch");
+  }
+  return json;
+};
 
 export default function ProfileSettingsPage() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -26,6 +36,9 @@ export default function ProfileSettingsPage() {
     if (data?.user) {
       setName(data.user.name || "");
       setUsername(data.user.username || "");
+      setEmail(data.user.email || "");
+      setPhone(data.user.phone || "");
+      setBio(data.user.bio || "");
       if (data.user.avatar) setAvatar(data.user.avatar);
     }
   }, [data]);
@@ -53,7 +66,7 @@ export default function ProfileSettingsPage() {
       const res = await fetch("/api/auth/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, avatar }),
+        body: JSON.stringify({ name, avatar, email, phone, bio }),
       });
 
       if (!res.ok) {
@@ -150,9 +163,32 @@ export default function ProfileSettingsPage() {
             <p className="text-xs text-muted-foreground">Username cannot be changed.</p>
           </div>
           <div className="grid gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input 
+              id="email" 
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="max-w-md bg-muted/50" 
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="phone">Phone</Label>
+            <Input 
+              id="phone" 
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+1 (555) 000-0000"
+              className="max-w-md bg-muted/50" 
+            />
+          </div>
+          <div className="grid gap-2">
             <Label htmlFor="bio">Bio</Label>
             <Textarea 
               id="bio" 
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
               placeholder="Tell us a little bit about yourself" 
               className="max-w-md bg-muted/50 resize-none" 
               rows={4} 
