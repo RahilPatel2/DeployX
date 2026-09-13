@@ -1,28 +1,39 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Lock, Globe, GitBranch, GitFork, Box, Loader2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Search, Lock, Globe, GitBranch, GitFork, Box, Loader2, ArrowLeft, Settings2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import useSWR from "swr";
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to fetch");
+  if (!res.ok) {
+    throw new Error(data.error || "An error occurred while fetching data.");
+  }
   return data;
 };
 
-import { Suspense } from "react";
-
 function NewProjectForm() {
-  const [importingId, setImportingId] = useState<number | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const [selectedRepo, setSelectedRepo] = useState<any | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [projectName, setProjectName] = useState("");
+  const [framework, setFramework] = useState("");
+  const [buildCommand, setBuildCommand] = useState("");
+  const [outputDirectory, setOutputDirectory] = useState("");
+  const [installCommand, setInstallCommand] = useState("");
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const error = searchParams.get('error');
@@ -38,37 +49,69 @@ function NewProjectForm() {
     isConnected ? "/api/integrations/github/repos" : null,
     fetcher
   );
+  
+  const allRepos = reposData?.repos || [];
+  const repos = allRepos.filter((r: any) => r.full_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const repos = reposData?.repos || [];
+  const { data: branchesData, isLoading: branchesLoading } = useSWR(
+    selectedRepo ? `/api/integrations/github/branches?repo=${selectedRepo.full_name}` : null,
+    fetcher
+  );
 
-  const handleImport = async (repo: any) => {
-    setImportingId(repo.id);
+  const { data: frameworkData, isLoading: frameworkLoading } = useSWR(
+    selectedRepo && selectedBranch ? `/api/integrations/github/framework?repo=${selectedRepo.full_name}&branch=${selectedBranch}` : null,
+    fetcher
+  );
+
+  useEffect(() => {
+    if (frameworkData) {
+      setFramework(frameworkData.framework);
+      setBuildCommand(frameworkData.buildCommand);
+      setOutputDirectory(frameworkData.outputDirectory);
+      setInstallCommand(frameworkData.installCommand);
+    }
+  }, [frameworkData]);
+
+  const handleSelectRepo = (repo: any) => {
+    setSelectedRepo(repo);
+    setSelectedBranch(repo.default_branch);
+    setProjectName(repo.name);
+  };
+
+  const handleDeploy = async () => {
+    if (!projectName || !selectedBranch || !framework) {
+       toast.error("Please fill all required fields");
+       return;
+    }
+    
+    setIsDeploying(true);
     try {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: repo.name,
-          repository: repo.full_name,
-          branch: repo.default_branch,
-          framework: "Next.js", // We auto-detect this in a real system
-          buildCommand: "npm run build",
-          outputDirectory: ".next",
-          installCommand: "npm install",
+          name: projectName,
+          repository: selectedRepo.full_name,
+          branch: selectedBranch,
+          framework,
+          buildCommand,
+          outputDirectory,
+          installCommand,
         }),
       });
 
       if (!res.ok) {
-        throw new Error("Failed to create project");
+        const err = await res.json();
+        throw new Error(err.error || "Failed to create project");
       }
 
       const data = await res.json();
-      toast.success("Project imported successfully");
+      toast.success("Project imported and deploying");
       router.push(`/dashboard/projects/${data.project._id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("An error occurred while importing the project");
-      setImportingId(null);
+      toast.error(error.message || "An error occurred while importing the project");
+      setIsDeploying(false);
     }
   };
 
@@ -76,9 +119,127 @@ function NewProjectForm() {
     window.location.href = "/api/integrations/github/connect";
   };
 
+  if (selectedRepo) {
+    return (
+      <>
+        <div className="flex flex-col space-y-2 mb-6">
+           <Button variant="ghost" size="sm" className="w-fit mb-2 text-muted-foreground" onClick={() => setSelectedRepo(null)}>
+             <ArrowLeft className="h-4 w-4 mr-2" /> Back to Repositories
+           </Button>
+          <h2 className="text-3xl font-bold tracking-tight">Configure Project</h2>
+          <p className="text-muted-foreground">
+            Review your deployment configuration. We've auto-detected optimal settings.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 space-y-6">
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                   <Settings2 className="h-5 w-5" /> Project Settings
+                </CardTitle>
+                <CardDescription>
+                  Deploying <span className="font-semibold text-foreground">{selectedRepo.full_name}</span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Project Name</Label>
+                  <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+                </div>
+                
+                <div className="space-y-2">
+                   <Label>Production Branch</Label>
+                   {branchesLoading ? (
+                     <div className="h-10 flex items-center border border-border/50 rounded-md px-3 text-muted-foreground text-sm">
+                       <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Fetching branches...
+                     </div>
+                   ) : (
+                     <Select value={selectedBranch} onValueChange={(val) => setSelectedBranch(val || "")}>
+                       <SelectTrigger>
+                         <SelectValue placeholder="Select a branch" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {branchesData?.branches?.map((b: any) => (
+                           <SelectItem key={b.name} value={b.name}>
+                             {b.name} {b.name === selectedRepo.default_branch ? "(default)" : ""}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                   )}
+                </div>
+
+                <div className="pt-4 border-t border-border/50">
+                  <h4 className="text-sm font-medium mb-4 flex items-center justify-between">
+                    Build Settings
+                    {frameworkLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                  </h4>
+                  <div className="space-y-4">
+                     <div className="space-y-2">
+                        <Label>Framework</Label>
+                        <Input value={framework} onChange={(e) => setFramework(e.target.value)} disabled={frameworkLoading} />
+                     </div>
+                     <div className="space-y-2">
+                        <Label>Build Command</Label>
+                        <Input value={buildCommand} onChange={(e) => setBuildCommand(e.target.value)} placeholder="e.g. npm run build" disabled={frameworkLoading} />
+                     </div>
+                     <div className="space-y-2">
+                        <Label>Output Directory</Label>
+                        <Input value={outputDirectory} onChange={(e) => setOutputDirectory(e.target.value)} placeholder="e.g. out, dist, build" disabled={frameworkLoading} />
+                     </div>
+                     <div className="space-y-2">
+                        <Label>Install Command</Label>
+                        <Input value={installCommand} onChange={(e) => setInstallCommand(e.target.value)} placeholder="e.g. npm install" disabled={frameworkLoading} />
+                     </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="bg-muted/20 border-t border-border/50 px-6 py-4">
+                <Button onClick={handleDeploy} disabled={isDeploying || frameworkLoading || branchesLoading} className="w-full md:w-auto">
+                  {isDeploying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Deploy Project
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+          
+          <div className="space-y-6">
+            <Card className="bg-card/50 backdrop-blur border-border/50">
+              <CardHeader>
+                <CardTitle className="text-lg">Repository Info</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Owner</span>
+                  <span className="font-medium">{selectedRepo.owner?.login}</span>
+                </div>
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Visibility</span>
+                  <span className="font-medium flex items-center gap-1">
+                    {selectedRepo.private ? <><Lock className="h-3 w-3"/> Private</> : <><Globe className="h-3 w-3"/> Public</>}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Language</span>
+                  <span className="font-medium">{selectedRepo.language || "Unknown"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Updated</span>
+                  <span className="font-medium">{formatDistanceToNow(new Date(selectedRepo.updated_at), { addSuffix: true })}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
-      <div className="flex flex-col space-y-2">
+      <div className="flex flex-col space-y-2 mb-6">
         <h2 className="text-3xl font-bold tracking-tight">Create a new Project</h2>
         <p className="text-muted-foreground">
           Import your GitHub repository to deploy it automatically to our global edge network.
@@ -116,10 +277,12 @@ function NewProjectForm() {
                       type="search"
                       placeholder="Search repositories..."
                       className="pl-8 bg-muted/50 border-border/50"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
 
-                  <div className="rounded-md border border-border/50 bg-muted/20">
+                  <div className="rounded-md border border-border/50 bg-muted/20 max-h-[500px] overflow-y-auto">
                     {reposLoading ? (
                       <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
                     ) : reposError ? (
@@ -129,7 +292,7 @@ function NewProjectForm() {
                       </div>
                     ) : repos.length === 0 ? (
                       <div className="p-8 text-center text-muted-foreground">
-                        No repositories found.
+                        No repositories found matching your search.
                       </div>
                     ) : (
                       repos.map((repo: any) => (
@@ -171,17 +334,9 @@ function NewProjectForm() {
                           <Button 
                             size="sm" 
                             variant="secondary" 
-                            onClick={() => handleImport(repo)}
-                            disabled={importingId !== null}
+                            onClick={() => handleSelectRepo(repo)}
                           >
-                            {importingId === repo.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Importing...
-                              </>
-                            ) : (
-                              "Import"
-                            )}
+                            Import
                           </Button>
                         </div>
                       ))

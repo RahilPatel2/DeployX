@@ -2,16 +2,27 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb/client";
 import Integration from "@/models/Integration";
 import { requireAuth } from "@/lib/auth/session";
+import { cookies } from "next/headers";
 
 export async function GET(req: Request) {
   try {
     const userId = await requireAuth();
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
+
+    const cookieStore = await cookies();
+    const storedState = cookieStore.get("github_oauth_state")?.value;
 
     if (!code) {
       return NextResponse.redirect(new URL("/dashboard/projects/new?error=No+code+provided", req.url));
     }
+
+    if (!state || !storedState || state !== storedState) {
+      return NextResponse.redirect(new URL("/dashboard/projects/new?error=Invalid+OAuth+State", req.url));
+    }
+    
+    cookieStore.delete("github_oauth_state");
 
     const clientId = process.env.GITHUB_CLIENT_ID;
     const clientSecret = process.env.GITHUB_CLIENT_SECRET;
