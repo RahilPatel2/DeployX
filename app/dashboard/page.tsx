@@ -33,7 +33,7 @@ async function getAnalyticsData() {
       activeProjects: projectCount,
       totalDeployments,
       successRate,
-      avgBuildTime: "45s" // Mocking avg build time for now
+      avgBuildTime: "N/A"
     };
   } catch (error) {
     return { activeProjects: 0, totalDeployments: 0, successRate: "0.0%", avgBuildTime: "0s" };

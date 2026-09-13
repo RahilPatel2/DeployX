@@ -3,13 +3,52 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Smartphone, Key, AlertTriangle, Loader2 } from "lucide-react";
+import { Shield, AlertTriangle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function SecuritySettingsPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const res = await fetch("/api/auth/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update password");
+      }
+
+      toast.success("Password updated successfully");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -32,19 +71,31 @@ export default function SecuritySettingsPage() {
         <CardContent className="space-y-4 max-w-xl">
           <div className="space-y-2">
             <Label>Current Password</Label>
-            <PasswordInput placeholder="Enter current password" />
+            <PasswordInput 
+              placeholder="Enter current password" 
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label>New Password</Label>
-            <PasswordInput placeholder="Enter new password" />
+            <PasswordInput 
+              placeholder="Enter new password" 
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label>Confirm New Password</Label>
-            <PasswordInput placeholder="Confirm new password" />
+            <PasswordInput 
+              placeholder="Confirm new password" 
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
           </div>
         </CardContent>
         <CardFooter className="border-t border-border/50 px-6 py-4">
-          <Button onClick={() => setIsChangingPassword(true)} disabled={isChangingPassword}>
+          <Button onClick={handleChangePassword} disabled={isChangingPassword}>
             {isChangingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Update Password
           </Button>
@@ -66,26 +117,15 @@ export default function SecuritySettingsPage() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">Windows PC - Chrome</span>
+                  <span className="font-medium">Current Session</span>
                   <Badge variant="secondary" className="text-[10px]">Current</Badge>
                 </div>
-                <div className="text-sm text-muted-foreground">Mumbai, India • Active now</div>
+                <div className="text-sm text-muted-foreground">Active now</div>
               </div>
             </div>
             <Button variant="ghost" size="sm" disabled>Log out</Button>
           </div>
         </CardContent>
-        <CardFooter className="border-t border-border/50 px-6 py-4">
-          <Button 
-            variant="secondary" 
-            className="w-full sm:w-auto"
-            onClick={() => setIsLoggingOut(true)}
-            disabled={isLoggingOut}
-          >
-            {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Log out of all other devices
-          </Button>
-        </CardFooter>
       </Card>
 
       <Card className="bg-destructive/10 border-destructive/20 backdrop-blur">

@@ -6,11 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Globe, MoreVertical, Search, CheckCircle2, AlertCircle } from "lucide-react";
 
-const mockDomains = [
-  { id: 1, domain: "portfolio.deployx.app", project: "portfolio-nextjs", status: "active", ssl: true },
-  { id: 2, domain: "api.deployx.app", project: "deployx-api", status: "active", ssl: true },
-  { id: 3, domain: "www.example.com", project: "portfolio-nextjs", status: "pending", ssl: false },
-];
+const mockDomains: any[] = [];
 
 export default function DomainsPage() {
   return (
@@ -29,43 +25,54 @@ export default function DomainsPage() {
       </div>
 
       <div className="space-y-4">
-        {mockDomains.map((domain) => (
-          <Card key={domain.id} className="bg-card/50 backdrop-blur border-border/50">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div className="flex items-start gap-4">
-                <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                  <Globe className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-lg">{domain.domain}</span>
-                    {domain.status === "active" ? (
-                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
-                        <CheckCircle2 className="h-3 w-3 mr-1" /> Active
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
-                        <AlertCircle className="h-3 w-3 mr-1" /> Pending Verification
-                      </Badge>
-                    )}
+        {mockDomains.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border/50 rounded-xl bg-card/20 backdrop-blur">
+            <Globe className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No domains yet</h3>
+            <p className="text-muted-foreground text-center max-w-md mb-6">
+              You haven't added any custom domains yet. Connect your domains to your projects to make them accessible to the world.
+            </p>
+            <Button>Add Domain</Button>
+          </div>
+        ) : (
+          mockDomains.map((domain) => (
+            <Card key={domain.id} className="bg-card/50 backdrop-blur border-border/50">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                    <Globe className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <div className="text-sm text-muted-foreground flex items-center gap-4">
-                    <span>Project: <span className="text-foreground font-medium">{domain.project}</span></span>
-                    {domain.ssl && <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-emerald-500" /> SSL Secured</span>}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-lg">{domain.domain}</span>
+                      {domain.status === "active" ? (
+                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                          <AlertCircle className="h-3 w-3 mr-1" /> Pending Verification
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-4">
+                      <span>Project: <span className="text-foreground font-medium">{domain.project}</span></span>
+                      {domain.ssl && <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-emerald-500" /> SSL Secured</span>}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-4">
-                {domain.status === "pending" && (
-                  <Button variant="secondary" size="sm">Verify DNS</Button>
-                )}
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <div className="flex items-center gap-4">
+                  {domain.status === "pending" && (
+                    <Button variant="secondary" size="sm">Verify DNS</Button>
+                  )}
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );

@@ -7,11 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Key, MoreVertical, Search, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
-const mockEnvVars = [
-  { id: 1, key: "DATABASE_URL", envs: ["Production", "Preview"], project: "portfolio-nextjs" },
-  { id: 2, key: "NEXT_PUBLIC_API_KEY", envs: ["Production", "Preview", "Development"], project: "portfolio-nextjs" },
-  { id: 3, key: "STRIPE_SECRET_KEY", envs: ["Production"], project: "deployx-api" },
-];
+const mockEnvVars: any[] = [];
 
 export default function EnvVarsPage() {
   const [showValues, setShowValues] = useState<Record<number, boolean>>({});
@@ -36,43 +32,54 @@ export default function EnvVarsPage() {
       </div>
 
       <div className="space-y-4">
-        {mockEnvVars.map((envVar) => (
-          <Card key={envVar.id} className="bg-card/50 backdrop-blur border-border/50">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div className="flex items-start gap-4">
-                <div className="h-10 w-10 rounded-md bg-secondary/50 border border-border flex items-center justify-center shrink-0">
-                  <Key className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold text-sm">{envVar.key}</span>
+        {mockEnvVars.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border/50 rounded-xl bg-card/20 backdrop-blur">
+            <Key className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No environment variables</h3>
+            <p className="text-muted-foreground text-center max-w-md mb-6">
+              You haven't added any environment variables yet. Add secrets and configuration to be injected into your deployments.
+            </p>
+            <Button>Add Variable</Button>
+          </div>
+        ) : (
+          mockEnvVars.map((envVar) => (
+            <Card key={envVar.id} className="bg-card/50 backdrop-blur border-border/50">
+              <CardContent className="p-6 flex items-center justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="h-10 w-10 rounded-md bg-secondary/50 border border-border flex items-center justify-center shrink-0">
+                    <Key className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="font-mono text-sm text-muted-foreground bg-muted px-2 py-0.5 rounded flex items-center gap-2">
-                      {showValues[envVar.id] ? "sk_live_51...2aB" : "••••••••••••••••••••••••"}
-                      <button onClick={() => toggleShow(envVar.id)} className="hover:text-foreground">
-                        {showValues[envVar.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                      </button>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-semibold text-sm">{envVar.key}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-mono text-sm text-muted-foreground bg-muted px-2 py-0.5 rounded flex items-center gap-2">
+                        {showValues[envVar.id] ? "sk_live_51...2aB" : "••••••••••••••••••••••••"}
+                        <button onClick={() => toggleShow(envVar.id)} className="hover:text-foreground">
+                          {showValues[envVar.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      {envVar.envs.map((env: string) => (
+                        <Badge key={env} variant="secondary" className="text-[10px] bg-secondary/50 hover:bg-secondary">
+                          {env}
+                        </Badge>
+                      ))}
+                      <span className="text-xs text-muted-foreground ml-2">in {envVar.project}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 pt-1">
-                    {envVar.envs.map(env => (
-                      <Badge key={env} variant="secondary" className="text-[10px] bg-secondary/50 hover:bg-secondary">
-                        {env}
-                      </Badge>
-                    ))}
-                    <span className="text-xs text-muted-foreground ml-2">in {envVar.project}</span>
-                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );
