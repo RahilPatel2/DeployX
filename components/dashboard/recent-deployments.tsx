@@ -8,6 +8,7 @@ import { GitFork, Loader2, FolderKanban } from "lucide-react";
 import Link from "next/link";
 import useSWR from "swr";
 import { formatDistanceToNow } from "date-fns";
+import { motion } from "framer-motion";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -32,7 +33,12 @@ export function RecentDeploymentsTable({ projectId }: { projectId?: string }) {
   const deployments = data?.deployments || [];
 
   return (
-    <Card className="col-span-full lg:col-span-4">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <Card className="bg-card/50 backdrop-blur border-border/50 shadow-sm col-span-full lg:col-span-4">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="space-y-1">
           <CardTitle>Recent Deployments</CardTitle>
@@ -117,6 +123,7 @@ export function RecentDeploymentsTable({ projectId }: { projectId?: string }) {
         )}
       </CardContent>
     </Card>
+    </motion.div>
   );
 }
 

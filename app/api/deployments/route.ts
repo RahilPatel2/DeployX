@@ -87,7 +87,8 @@ export async function GET(req: Request) {
       query.projectId = projectId;
     }
 
-    const deployments = await Deployment.find(query).sort({ createdAt: -1 });
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const deployments = await Deployment.find(query).sort({ createdAt: -1 }).limit(limit).lean();
 
     return NextResponse.json({ deployments });
   } catch (error) {

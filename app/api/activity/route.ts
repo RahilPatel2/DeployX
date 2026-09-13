@@ -12,7 +12,7 @@ export async function GET(req: Request) {
 
     await connectToDatabase();
     
-    const activities = await Activity.find({ userId: session.userId }).sort({ createdAt: -1 }).limit(50);
+    const activities = await Activity.find({ userId: session.userId }).sort({ createdAt: -1 }).limit(50).lean();
 
     return NextResponse.json({ activities });
   } catch (error) {

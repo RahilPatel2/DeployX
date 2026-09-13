@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import useSWR from "swr";
+import { motion } from "framer-motion";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -14,7 +15,12 @@ export function DeploymentActivityChart() {
   const chartData = data?.chartData || [];
 
   return (
-    <Card className="col-span-full lg:col-span-4">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.1 }}
+    >
+      <Card className="col-span-full lg:col-span-4 bg-card/50 backdrop-blur shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="space-y-1">
           <CardTitle>Deployment Activity</CardTitle>
@@ -82,5 +88,6 @@ export function DeploymentActivityChart() {
         </div>
       </CardContent>
     </Card>
+    </motion.div>
   );
 }

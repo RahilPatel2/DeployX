@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     await connectToDatabase();
     
     // Allow sorting and filtering via search params if needed
-    const projects = await Project.find({ userId: session.userId }).sort({ createdAt: -1 });
+    const projects = await Project.find({ userId: session.userId }).sort({ createdAt: -1 }).limit(100).lean();
 
     return NextResponse.json({ projects });
   } catch (error) {

@@ -85,7 +85,7 @@ function SignupFormInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: data.fullName,
+          fullName: data.fullName,
           username: data.username,
           email: data.email,
           password: data.password,

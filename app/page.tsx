@@ -109,37 +109,71 @@ export default function Home() {
       </main>
       
       {/* Features Grid */}
-      <section className="py-24 border-t border-border/50 bg-[#0a0a0a] z-10 w-full">
-        <div className="container mx-auto px-6">
+      <section className="py-24 border-t border-border/50 bg-[#0a0a0a] z-10 w-full overflow-hidden">
+        <motion.div 
+          initial="hidden" 
+          whileInView="show" 
+          viewport={{ once: false, amount: 0.2 }}
+          variants={{
+            hidden: {},
+            show: {
+              transition: { staggerChildren: 0.15 }
+            }
+          }}
+          className="container mx-auto px-6"
+        >
           <div className="grid md:grid-cols-3 gap-12">
-            <div className="space-y-4">
-              <div className="h-12 w-12 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                <Zap className="h-6 w-6 text-blue-500" />
-              </div>
-              <h3 className="text-xl font-bold tracking-tight">Instant Edge Deployments</h3>
-              <p className="text-muted-foreground leading-relaxed">Your code is distributed to our global edge network in seconds, ensuring sub-millisecond latency for your users everywhere.</p>
-            </div>
-            <div className="space-y-4">
-              <div className="h-12 w-12 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                <Code className="h-6 w-6 text-emerald-500" />
-              </div>
-              <h3 className="text-xl font-bold tracking-tight">Framework Agnostic</h3>
-              <p className="text-muted-foreground leading-relaxed">Built-in support for Next.js, React, Vue, Svelte, Nuxt, and 30+ other modern web frameworks with zero configuration required.</p>
-            </div>
-            <div className="space-y-4">
-              <div className="h-12 w-12 rounded-lg bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                <Terminal className="h-6 w-6 text-purple-500" />
-              </div>
-              <h3 className="text-xl font-bold tracking-tight">Advanced Analytics</h3>
-              <p className="text-muted-foreground leading-relaxed">Real-time traffic insights, performance monitoring, and build analytics built directly into your dashboard.</p>
-            </div>
+            {[
+              {
+                icon: Zap,
+                iconBg: "bg-blue-500/10 border-blue-500/20",
+                iconColor: "text-blue-500",
+                title: "Instant Edge Deployments",
+                desc: "Your code is distributed to our global edge network in seconds, ensuring sub-millisecond latency for your users everywhere."
+              },
+              {
+                icon: Code,
+                iconBg: "bg-emerald-500/10 border-emerald-500/20",
+                iconColor: "text-emerald-500",
+                title: "Framework Agnostic",
+                desc: "Built-in support for Next.js, React, Vue, Svelte, Nuxt, and 30+ other modern web frameworks with zero configuration required."
+              },
+              {
+                icon: Terminal,
+                iconBg: "bg-purple-500/10 border-purple-500/20",
+                iconColor: "text-purple-500",
+                title: "Advanced Analytics",
+                desc: "Real-time traffic insights, performance monitoring, and build analytics built directly into your dashboard."
+              }
+            ].map((feat, i) => (
+              <motion.div 
+                key={i}
+                variants={{
+                  hidden: { opacity: 0, y: 50 },
+                  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 20 } }
+                }}
+                className="space-y-4"
+              >
+                <div className={`h-12 w-12 rounded-lg flex items-center justify-center border ${feat.iconBg}`}>
+                  <feat.icon className={`h-6 w-6 ${feat.iconColor}`} />
+                </div>
+                <h3 className="text-xl font-bold tracking-tight">{feat.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{feat.desc}</p>
+              </motion.div>
+            ))}
           </div>
-        </div>
+        </motion.div>
       </section>
       
       {/* Footer */}
       <footer className="border-t border-border/50 bg-black py-12 z-10 w-full">
-        <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.5 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4"
+        >
           <div className="flex items-center gap-2">
             <div className="h-6 w-6 bg-foreground rounded flex items-center justify-center">
               <span className="text-background font-bold text-[10px]">DX</span>
@@ -149,7 +183,7 @@ export default function Home() {
           <div className="text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} DeployX. Building the future of infrastructure.
           </div>
-        </div>
+        </motion.div>
       </footer>
     </div>
   );
