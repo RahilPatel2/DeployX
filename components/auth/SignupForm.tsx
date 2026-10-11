@@ -95,15 +95,14 @@ function SignupFormInner() {
       const result = await res.json();
 
       if (!res.ok) {
-        setServerError(result.error || "An error occurred during signup.");
+        setServerError(result.error || result.message || "An error occurred during signup.");
         setIsLoading(false);
         return;
       }
 
-      router.push(redirectUrl);
-      router.refresh();
-    } catch {
-      setServerError("Network error. Please try again later.");
+      window.location.href = redirectUrl;
+    } catch (err: any) {
+      setServerError(err?.message || "Network error. Please try again later.");
       setIsLoading(false);
     }
   };

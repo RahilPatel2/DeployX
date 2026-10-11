@@ -67,15 +67,14 @@ function LoginFormInner() {
       const result = await res.json();
 
       if (!res.ok) {
-        setServerError(result.error || "Incorrect username or password.");
+        setServerError(result.error || result.message || "Incorrect username or password.");
         setIsLoading(false);
         return;
       }
 
-      router.push(redirectUrl);
-      router.refresh(); // Force a full navigation refresh for SWR/Middleware state
-    } catch {
-      setServerError("Network error. Please try again later.");
+      window.location.href = redirectUrl;
+    } catch (err: any) {
+      setServerError(err?.message || "Network error. Please try again later.");
       setIsLoading(false);
     }
   };
