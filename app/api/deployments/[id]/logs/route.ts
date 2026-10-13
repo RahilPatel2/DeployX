@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import connectToDatabase from "@/lib/mongodb/client";
 import Deployment from "@/models/Deployment";
 import Project from "@/models/Project";
@@ -10,12 +11,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || !session.userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
+    if (!id || !mongoose.isValidObjectId(id)) {
+      return NextResponse.json({ error: "Deployment not found" }, { status: 404 });
+    }
+
     await connectToDatabase();
 
     const deployment = await Deployment.findOne({ _id: id, userId: session.userId });
@@ -23,32 +28,46 @@ export async function GET(
       return NextResponse.json({ error: "Deployment not found" }, { status: 404 });
     }
 
-    if (!deployment.cloudflareDeploymentId) {
-       return NextResponse.json({ logs: ["No Cloudflare deployment found."] });
-    }
+    const { searchParams } = new URL(req.url);
+    const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10), 0);
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "1000", 10), 1), 5000);
 
-    const project = await Project.findById(deployment.projectId);
-    if (!project || !project.cloudflareProjectName) {
-       return NextResponse.json({ logs: ["No Cloudflare project connected."] });
-    }
+    let allLogs: string[] = Array.isArray(deployment.logs) ? deployment.logs : [];
 
-    try {
-      const logsData = await CloudflareProvider.getDeploymentLogs(project.cloudflareProjectName, deployment.cloudflareDeploymentId);
-      // logsData is usually an object containing { data: [{line, timestamp}] } depending on CF Pages API.
-      // We map it to an array of strings for simplicity
-      const logs = logsData.data ? logsData.data.map((l: any) => l.line) : [];
-      
-      // Save it locally too
-      if (logs.length > 0) {
-         deployment.logs = logs;
-         await deployment.save();
+    // If local logs are empty and a Cloudflare deployment exists, attempt Cloudflare log retrieval
+    if (allLogs.length === 0 && deployment.cloudflareDeploymentId) {
+      const project = await Project.findOne({ _id: deployment.projectId, userId: session.userId });
+      if (project && project.cloudflareProjectName) {
+        try {
+          const logsData = await CloudflareProvider.getDeploymentLogs(project.cloudflareProjectName, deployment.cloudflareDeploymentId);
+          const cfLogs = Array.isArray(logsData.data)
+            ? logsData.data.map((l: { line?: string }) => l.line || "").filter(Boolean)
+            : [];
+
+          if (cfLogs.length > 0) {
+            allLogs = cfLogs;
+            deployment.logs = cfLogs;
+            await deployment.save();
+          }
+        } catch {
+          // Ignore CF log fetch error and proceed
+        }
       }
-
-      return NextResponse.json({ logs: logs.length > 0 ? logs : deployment.logs || [] });
-    } catch (cfError) {
-      // If fetching fails, return cached logs
-      return NextResponse.json({ logs: deployment.logs || ["Failed to fetch live logs from Cloudflare."] });
     }
+
+    const { redactSensitive } = await import("@/lib/cloudflare/client");
+    const sanitizedLogs = allLogs.map((l) => redactSensitive(l));
+    const totalLines = sanitizedLogs.length;
+    const paginatedLogs = sanitizedLogs.slice(offset, offset + limit);
+
+    return NextResponse.json({
+      logs: paginatedLogs,
+      totalLines,
+      offset,
+      limit,
+      hasMore: offset + limit < totalLines,
+      emptyMessage: totalLines === 0 ? "No build logs recorded yet for this deployment." : undefined,
+    });
 
   } catch (error) {
     console.error("Deployment Logs GET error:", error);
