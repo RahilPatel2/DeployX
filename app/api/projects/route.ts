@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb/client";
 import Project from "@/models/Project";
+import Integration from "@/models/Integration";
 import { getSession } from "@/lib/auth/session";
+import { decryptToken } from "@/lib/auth/encryption";
 import { CloudflareProvider } from "@/lib/cloudflare/provider";
 
 export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || !session.userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectToDatabase();
-    
-    // Allow sorting and filtering via search params if needed
-    const projects = await Project.find({ userId: session.userId }).sort({ createdAt: -1 }).limit(100).lean();
+
+    // Fetch projects scoped strictly to the authenticated user
+    const projects = await Project.find({ userId: session.userId })
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
 
     return NextResponse.json({ projects });
   } catch (error) {
@@ -25,56 +30,184 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || !session.userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
-    const { name, repository, framework, branch, buildCommand, outputDirectory, installCommand } = body;
-
-    if (!name || !repository) {
-      return NextResponse.json({ error: "Name and repository are required" }, { status: 400 });
-    }
-
-    await connectToDatabase();
-
-    // Create a URL-safe slug that also acts as the CF project name
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.random().toString(36).substring(2, 6);
-
-    let cloudflareProjectName = slug;
-    
-    // Attempt to create Cloudflare project
-    try {
-      await CloudflareProvider.createProject(cloudflareProjectName, branch || 'main', repository, buildCommand || 'npm run build', outputDirectory || '.next');
-    } catch (cfError: any) {
-      console.error("Cloudflare creation failed:", cfError.message);
-      // We log the error but still create the project locally, 
-      // allowing the user to retry deployment/connection later or diagnosing CF permissions.
-    }
-
-    const project = await Project.create({
+    const {
       name,
-      slug,
-      userId: session.userId,
       repository,
+      branch,
       framework,
-      branch: branch || 'main',
       buildCommand,
       outputDirectory,
       installCommand,
-      cloudflareProjectName,
-      productionUrl: `${cloudflareProjectName}.pages.dev`
+      rootDirectory,
+      packageManager,
+      deploymentMode,
+    } = body;
+
+    const validPackageManagers = ["npm", "pnpm", "yarn", "bun"];
+    const sanitizedPackageManager = validPackageManagers.includes(packageManager) ? packageManager : "npm";
+    const validDeploymentModes = ["static", "ssr"];
+    const sanitizedDeploymentMode = validDeploymentModes.includes(deploymentMode) ? deploymentMode : "static";
+    const { sanitizeRootDirectory } = await import("@/lib/github/framework");
+    const sanitizedRootDirectory = sanitizeRootDirectory(rootDirectory);
+
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return NextResponse.json({ error: "Project name is required" }, { status: 400 });
+    }
+
+    if (!repository || typeof repository !== "string" || !/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/.test(repository.trim())) {
+      return NextResponse.json({ error: "Valid repository in 'owner/repo' format is required" }, { status: 400 });
+    }
+
+    const cleanRepo = repository.trim();
+    const cleanRepoPath = cleanRepo.split("/").map(encodeURIComponent).join("/");
+
+    await connectToDatabase();
+
+    // 1. Verify user's connected GitHub integration
+    const integration = await Integration.findOne({ userId: session.userId, provider: "github" });
+    if (!integration) {
+      return NextResponse.json(
+        { error: "GitHub account not connected. Please connect your GitHub account to import repositories." },
+        { status: 400 }
+      );
+    }
+
+    let token: string;
+    try {
+      token = decryptToken(integration.accessToken);
+    } catch {
+      return NextResponse.json(
+        { error: "Could not decrypt GitHub credentials. Please reconnect your account." },
+        { status: 401 }
+      );
+    }
+
+    // 2. Revalidate repository access on GitHub's API server-side
+    const repoRes = await fetch(`https://api.github.com/repos/${cleanRepoPath}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "DeployX-Platform",
+      },
     });
 
-    // Also log activity
+    if (!repoRes.ok) {
+      if (repoRes.status === 404 || repoRes.status === 403) {
+        return NextResponse.json(
+          { error: `Repository '${cleanRepo}' does not exist or your GitHub account lacks access to it.` },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json(
+        { error: `GitHub verification failed: ${repoRes.statusText}` },
+        { status: repoRes.status }
+      );
+    }
+
+    const repoData = await repoRes.json();
+    const repoId = repoData.id;
+    const repoOwner = repoData.owner?.login || cleanRepo.split("/")[0];
+    const repoName = repoData.name || cleanRepo.split("/")[1];
+    const repoVisibility = repoData.private ? "private" : "public";
+    const defaultBranch = repoData.default_branch || "main";
+
+    const targetBranch = branch && typeof branch === "string" ? branch.trim() : defaultBranch;
+
+    // 3. Revalidate that the chosen branch exists in this repository
+    const branchRes = await fetch(
+      `https://api.github.com/repos/${cleanRepoPath}/branches/${encodeURIComponent(targetBranch)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github.v3+json",
+          "User-Agent": "DeployX-Platform",
+        },
+      }
+    );
+
+    if (!branchRes.ok) {
+      return NextResponse.json(
+        { error: `Branch '${targetBranch}' does not exist in repository '${cleanRepo}'. Please select a valid branch.` },
+        { status: 400 }
+      );
+    }
+
+    // 4. Duplicate project check for this user
+    const existingProject = await Project.findOne({
+      userId: session.userId,
+      repository: repoData.full_name,
+    });
+
+    if (existingProject) {
+      return NextResponse.json(
+        {
+          error: `A project for repository '${repoData.full_name}' already exists in your workspace ('${existingProject.name}').`,
+          existingProjectId: existingProject._id,
+        },
+        { status: 409 }
+      );
+    }
+
+    // 5. Generate unique slug
+    const cleanName = name.trim();
+    const baseSlug = cleanName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "project";
+    const randomSuffix = Math.random().toString(36).substring(2, 7);
+    const slug = `${baseSlug}-${randomSuffix}`;
+    const cloudflareProjectName = slug;
+
+    // Attempt to register Cloudflare Pages project
+    try {
+      await CloudflareProvider.createProject(
+        cloudflareProjectName,
+        targetBranch,
+        repoData.full_name,
+        buildCommand || "npm run build",
+        outputDirectory || ".next",
+        sanitizedRootDirectory
+      );
+    } catch (cfError: unknown) {
+      const errMsg = cfError instanceof Error ? cfError.message : "Unknown error";
+      console.warn("Cloudflare Pages project registration note:", errMsg);
+    }
+
+    // 6. Create the project in MongoDB Atlas
+    const project = await Project.create({
+      name: cleanName,
+      slug,
+      userId: session.userId,
+      repository: repoData.full_name,
+      repositoryId: repoId,
+      repositoryOwner: repoOwner,
+      repositoryName: repoName,
+      repositoryVisibility: repoVisibility,
+      defaultBranch,
+      branch: targetBranch,
+      rootDirectory: sanitizedRootDirectory,
+      packageManager: sanitizedPackageManager,
+      deploymentMode: sanitizedDeploymentMode,
+      framework: framework || "Next.js",
+      buildCommand: buildCommand || "npm run build",
+      outputDirectory: outputDirectory || ".next",
+      installCommand: installCommand || "npm install",
+      cloudflareProjectName,
+      // Do not create a fake live URL; productionUrl will be populated after real deployment
+      productionUrl: undefined,
+    });
+
+    // 7. Record activity audit log
     const Activity = (await import("@/models/Activity")).default;
     await Activity.create({
       userId: session.userId,
       projectId: project._id,
       type: "project_created",
       title: "Project created",
-      description: `You created the project '${project.name}'.`,
+      description: `Created project '${project.name}' linked to GitHub repository '${repoData.full_name}' (branch '${targetBranch}').`,
       icon: "Box",
       color: "text-blue-500",
     });
