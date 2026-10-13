@@ -168,6 +168,22 @@ export async function PATCH(
 
     await project.save();
 
+    // Log activity
+    try {
+      const Activity = (await import("@/models/Activity")).default;
+      await Activity.create({
+        userId: session.userId,
+        projectId: project._id,
+        type: "project_updated",
+        title: "Project settings updated",
+        description: `Settings updated for project '${project.name}'.`,
+        icon: "Settings",
+        color: "text-amber-500",
+      });
+    } catch {
+      // Non-fatal
+    }
+
     return NextResponse.json({ project });
   } catch (error) {
     console.error("Project PATCH error:", error);
