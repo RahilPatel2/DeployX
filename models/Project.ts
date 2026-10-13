@@ -20,6 +20,14 @@ export interface IProject extends Document {
   installCommand: string;
   cloudflareProjectName?: string;
   productionUrl?: string;
+  autoDeploy?: boolean;
+  webhookSecret?: string;
+  githubWebhookId?: number;
+  webhookStatus?: 'active' | 'inactive' | 'manual' | 'failed';
+  lastWebhookPayloadAt?: Date;
+  lastWebhookDeliveryId?: string;
+  lastWebhookStatus?: 'success' | 'failed' | 'ignored';
+  lastWebhookError?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +53,18 @@ const ProjectSchema: Schema = new Schema(
     installCommand: { type: String, default: 'npm install' },
     cloudflareProjectName: { type: String },
     productionUrl: { type: String },
+    autoDeploy: { type: Boolean, default: true },
+    webhookSecret: { type: String },
+    githubWebhookId: { type: Number },
+    webhookStatus: {
+      type: String,
+      enum: ['active', 'inactive', 'manual', 'failed'],
+      default: 'inactive',
+    },
+    lastWebhookPayloadAt: { type: Date },
+    lastWebhookDeliveryId: { type: String },
+    lastWebhookStatus: { type: String, enum: ['success', 'failed', 'ignored'] },
+    lastWebhookError: { type: String },
   },
   {
     timestamps: true,
@@ -55,5 +75,6 @@ const ProjectSchema: Schema = new Schema(
 ProjectSchema.index({ userId: 1, createdAt: -1 });
 ProjectSchema.index({ userId: 1, slug: 1 });
 ProjectSchema.index({ userId: 1, repository: 1 });
+ProjectSchema.index({ repository: 1 });
 
 export default mongoose.models.Project || mongoose.model<IProject>('Project', ProjectSchema);
