@@ -20,6 +20,7 @@ interface Deployment {
   commitHash?: string;
   commitMessage?: string;
   environment: string;
+  trigger?: "manual" | "redeploy" | "webhook";
   createdAt: string;
   duration?: number;
   // populated field if possible, else just use projectId
@@ -110,7 +111,19 @@ export function RecentDeploymentsTable({
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="text-sm truncate max-w-[200px]">{dep.commitMessage || 'Manual Deploy'}</span>
+                      <div className="flex items-center gap-1.5 max-w-[240px]">
+                        <span className="text-sm truncate">{dep.commitMessage || 'Manual Deploy'}</span>
+                        {dep.trigger === 'webhook' && (
+                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 border-purple-500/30 text-purple-400 bg-purple-500/10 shrink-0">
+                            Push
+                          </Badge>
+                        )}
+                        {dep.trigger === 'redeploy' && (
+                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 border-amber-500/30 text-amber-400 bg-amber-500/10 shrink-0">
+                            Redeploy
+                          </Badge>
+                        )}
+                      </div>
                       {dep.commitHash && (
                         <span className="text-xs text-muted-foreground font-mono flex items-center gap-1 mt-0.5">
                           <GitFork className="h-3 w-3" />
