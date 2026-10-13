@@ -15,6 +15,12 @@ import {
   Loader2,
   FolderTree,
   Settings2,
+  Copy,
+  Eye,
+  EyeOff,
+  Radio,
+  RefreshCw,
+  Webhook,
 } from "lucide-react";
 import { DeploymentActivityChart } from "@/components/dashboard/deployment-chart";
 import { RecentDeploymentsTable } from "@/components/dashboard/recent-deployments";
@@ -40,6 +46,12 @@ interface ProjectData {
   outputDirectory: string;
   installCommand: string;
   productionUrl?: string;
+  autoDeploy?: boolean;
+  webhookStatus?: "active" | "inactive" | "manual" | "failed";
+  lastWebhookPayloadAt?: string;
+  lastWebhookDeliveryId?: string;
+  lastWebhookStatus?: "success" | "failed" | "ignored";
+  lastWebhookError?: string;
   updatedAt?: string;
 }
 
@@ -56,7 +68,17 @@ function ProjectSettingsTab({
   const [rootDirectory, setRootDirectory] = useState(project.rootDirectory || "");
   const [packageManager, setPackageManager] = useState(project.packageManager || "npm");
   const [deploymentMode, setDeploymentMode] = useState(project.deploymentMode || "static");
+  const [branch, setBranch] = useState(project.branch || "main");
+  const [autoDeploy, setAutoDeploy] = useState(project.autoDeploy ?? true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isSavingGit, setIsSavingGit] = useState(false);
+  const [isRegisteringWebhook, setIsRegisteringWebhook] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
+
+  const { data: webhookData, mutate: mutateWebhook } = useSWR(
+    `/api/projects/${project._id}/webhook`,
+    fetcher
+  );
 
   const handleSaveSettings = async () => {
     setIsSavingSettings(true);
@@ -89,113 +111,371 @@ function ProjectSettingsTab({
     }
   };
 
+  const handleSaveGitSettings = async () => {
+    setIsSavingGit(true);
+    try {
+      const res = await fetch(`/api/projects/${project._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          branch,
+          autoDeploy,
+        }),
+      });
+
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to update git settings");
+      }
+
+      toast.success("Git deployment settings saved successfully");
+      onSaved();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error saving git settings";
+      toast.error(msg);
+    } finally {
+      setIsSavingGit(false);
+    }
+  };
+
+  const handleRegisterWebhook = async () => {
+    setIsRegisteringWebhook(true);
+    try {
+      const res = await fetch(`/api/projects/${project._id}/webhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ regenerateSecret: false }),
+      });
+
+      const d = await res.json();
+      if (!res.ok) {
+        throw new Error(d.error || d.message || "Failed to register webhook");
+      }
+
+      if (d.status === "active") {
+        toast.success(d.message || "Webhook active on GitHub");
+      } else if (d.status === "manual") {
+        toast.info(d.message || "Please configure the webhook manually in GitHub repository settings.");
+      }
+      mutateWebhook();
+      onSaved();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error configuring webhook";
+      toast.error(msg);
+    } finally {
+      setIsRegisteringWebhook(false);
+    }
+  };
+
+  const handleRegenerateSecret = async () => {
+    if (!confirm("Are you sure you want to regenerate the webhook secret? You will need to update it in your GitHub repository settings.")) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/projects/${project._id}/webhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ regenerateSecret: true }),
+      });
+
+      if (!res.ok) throw new Error("Failed to regenerate secret");
+      toast.success("Webhook secret regenerated successfully");
+      mutateWebhook();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error regenerating secret";
+      toast.error(msg);
+    }
+  };
+
   return (
-    <Card className="bg-card/50 backdrop-blur border-border/50">
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Settings2 className="h-5 w-5" />
-          Build & Output Settings
-        </CardTitle>
-        <CardDescription>
-          Configure the commands and directories used to build and deploy this project.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-6">
+      {/* Git & Automatic Deployments Card */}
+      <Card className="bg-card/50 backdrop-blur border-border/50">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <GitBranch className="h-5 w-5" />
+            Git & Automatic Deployments
+          </CardTitle>
+          <CardDescription>
+            Configure automatic deployment triggers from GitHub push events.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="settingsBranch">Production Branch</Label>
+              <Input
+                id="settingsBranch"
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                placeholder="main"
+                className="font-mono text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Push events to this branch trigger automatic production deployments.
+              </p>
+            </div>
+            <div className="space-y-2 flex flex-col justify-center">
+              <Label htmlFor="settingsAutoDeploy">Automatic Deployments</Label>
+              <div className="flex items-center gap-3 pt-1">
+                <input
+                  type="checkbox"
+                  id="settingsAutoDeploy"
+                  checked={autoDeploy}
+                  onChange={(e) => setAutoDeploy(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                />
+                <label htmlFor="settingsAutoDeploy" className="text-xs text-muted-foreground cursor-pointer">
+                  {autoDeploy ? "Enabled — Auto-deploy on push" : "Disabled — Manual deployments only"}
+                </label>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="border-t border-border/50 px-6 py-4 flex justify-end bg-muted/10">
+          <Button onClick={handleSaveGitSettings} disabled={isSavingGit}>
+            {isSavingGit ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Save Git Settings
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {/* GitHub Webhook Triggers Card */}
+      <Card className="bg-card/50 backdrop-blur border-border/50">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Webhook className="h-5 w-5" />
+                GitHub Webhook Configuration
+              </CardTitle>
+              <CardDescription>
+                Webhook credentials and configuration for receiving GitHub push notifications.
+              </CardDescription>
+            </div>
+            {webhookData?.webhookStatus === "active" ? (
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+                Active on GitHub
+              </Badge>
+            ) : webhookData?.webhookStatus === "manual" ? (
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30">
+                Manual Setup Required
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="bg-muted text-muted-foreground">
+                Inactive
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="settingsRootDir">Root Directory</Label>
-            <Input
-              id="settingsRootDir"
-              value={rootDirectory}
-              onChange={(e) => setRootDirectory(e.target.value)}
-              placeholder="./ (repository root)"
-              className="font-mono text-xs"
-            />
+            <Label>Payload URL</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                readOnly
+                value={webhookData?.webhookUrl || "Loading webhook URL..."}
+                className="font-mono text-xs bg-muted/30"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  if (webhookData?.webhookUrl) {
+                    navigator.clipboard.writeText(webhookData.webhookUrl);
+                    toast.success("Webhook URL copied to clipboard");
+                  }
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
             <p className="text-[11px] text-muted-foreground">
-              Directory containing the project files (e.g., <code>apps/web</code> in monorepos).
+              Add this Payload URL in your GitHub repository settings under <strong>Settings → Webhooks</strong>.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="settingsPackageManager">Package Manager</Label>
-            <Select value={packageManager} onValueChange={(val) => setPackageManager(val || "npm")}>
-              <SelectTrigger id="settingsPackageManager" className="text-xs">
-                <SelectValue placeholder="Select package manager" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="npm">npm</SelectItem>
-                <SelectItem value="pnpm">pnpm</SelectItem>
-                <SelectItem value="yarn">yarn</SelectItem>
-                <SelectItem value="bun">bun</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">Used for dependency resolution and script execution.</p>
+            <Label>Webhook Secret</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type={showSecret ? "text" : "password"}
+                readOnly
+                value={webhookData?.webhookSecret || ""}
+                className="font-mono text-xs bg-muted/30"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setShowSecret(!showSecret)}
+              >
+                {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  if (webhookData?.webhookSecret) {
+                    navigator.clipboard.writeText(webhookData.webhookSecret);
+                    toast.success("Webhook secret copied to clipboard");
+                  }
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              HMAC-SHA256 signature secret for authenticating payloads. Never expose this secret.
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="settingsDeploymentMode">Deployment Mode</Label>
-            <Select value={deploymentMode} onValueChange={(val) => setDeploymentMode(val || "static")}>
-              <SelectTrigger id="settingsDeploymentMode" className="text-xs">
-                <SelectValue placeholder="Select deployment mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="static">Static Site (Cloudflare Pages)</SelectItem>
-                <SelectItem value="ssr">SSR / Edge Runtime</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">Defines whether site assets are statically exported.</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="settingsBuildCmd">Build Command</Label>
-            <Input
-              id="settingsBuildCmd"
-              value={buildCommand}
-              onChange={(e) => setBuildCommand(e.target.value)}
-              placeholder="npm run build"
-              className="font-mono text-xs"
-            />
-            <p className="text-[11px] text-muted-foreground">The command executed in the build environment.</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="settingsOutputDir">Output Directory</Label>
-            <Input
-              id="settingsOutputDir"
-              value={outputDirectory}
-              onChange={(e) => setOutputDirectory(e.target.value)}
-              placeholder="dist or .next"
-              className="font-mono text-xs"
-            />
-            <p className="text-[11px] text-muted-foreground">The directory containing the generated public assets.</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="settingsInstallCmd">Install Command</Label>
-            <Input
-              id="settingsInstallCmd"
-              value={installCommand}
-              onChange={(e) => setInstallCommand(e.target.value)}
-              placeholder="npm install"
-              className="font-mono text-xs"
-            />
-            <p className="text-[11px] text-muted-foreground">The command used to install package dependencies.</p>
-          </div>
-        </div>
-      </CardContent>
-      <CardFooter className="border-t border-border/50 px-6 py-4 flex justify-end bg-muted/10">
-        <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
-          {isSavingSettings ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Settings"
+          {webhookData?.lastWebhookPayloadAt && (
+            <div className="rounded-md border border-border/50 bg-muted/10 p-3 space-y-1">
+              <p className="text-xs font-medium text-foreground flex items-center gap-2">
+                <Radio className="h-3 w-3 text-emerald-500 animate-pulse" />
+                Last Received Push Event
+              </p>
+              <div className="text-[11px] text-muted-foreground space-y-0.5">
+                <p>Delivery ID: <span className="font-mono">{webhookData.lastWebhookDeliveryId}</span></p>
+                <p>Status: <span className="capitalize font-medium">{webhookData.lastWebhookStatus}</span></p>
+                <p>Timestamp: {new Date(webhookData.lastWebhookPayloadAt).toLocaleString()}</p>
+              </div>
+            </div>
           )}
-        </Button>
-      </CardFooter>
-    </Card>
+        </CardContent>
+        <CardFooter className="border-t border-border/50 px-6 py-4 flex justify-between bg-muted/10">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleRegenerateSecret}
+          >
+            Regenerate Secret
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleRegisterWebhook}
+            disabled={isRegisteringWebhook}
+          >
+            {isRegisteringWebhook ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            Register / Verify on GitHub
+          </Button>
+        </CardFooter>
+      </Card>
+
+      {/* Build & Output Settings Card */}
+      <Card className="bg-card/50 backdrop-blur border-border/50">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Settings2 className="h-5 w-5" />
+            Build & Output Settings
+          </CardTitle>
+          <CardDescription>
+            Configure the commands and directories used to build and deploy this project.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="settingsRootDir">Root Directory</Label>
+              <Input
+                id="settingsRootDir"
+                value={rootDirectory}
+                onChange={(e) => setRootDirectory(e.target.value)}
+                placeholder="./ (repository root)"
+                className="font-mono text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Directory containing the project files (e.g., <code>apps/web</code> in monorepos).
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="settingsPackageManager">Package Manager</Label>
+              <Select value={packageManager} onValueChange={(val) => setPackageManager(val || "npm")}>
+                <SelectTrigger id="settingsPackageManager" className="text-xs">
+                  <SelectValue placeholder="Select package manager" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="npm">npm</SelectItem>
+                  <SelectItem value="pnpm">pnpm</SelectItem>
+                  <SelectItem value="yarn">yarn</SelectItem>
+                  <SelectItem value="bun">bun</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">Used for dependency resolution and script execution.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="settingsDeploymentMode">Deployment Mode</Label>
+              <Select value={deploymentMode} onValueChange={(val) => setDeploymentMode(val || "static")}>
+                <SelectTrigger id="settingsDeploymentMode" className="text-xs">
+                  <SelectValue placeholder="Select deployment mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="static">Static Site (Cloudflare Pages)</SelectItem>
+                  <SelectItem value="ssr">SSR / Edge Runtime</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">Defines whether site assets are statically exported.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="settingsBuildCmd">Build Command</Label>
+              <Input
+                id="settingsBuildCmd"
+                value={buildCommand}
+                onChange={(e) => setBuildCommand(e.target.value)}
+                placeholder="npm run build"
+                className="font-mono text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground">The command executed in the build environment.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="settingsOutputDir">Output Directory</Label>
+              <Input
+                id="settingsOutputDir"
+                value={outputDirectory}
+                onChange={(e) => setOutputDirectory(e.target.value)}
+                placeholder="dist or .next"
+                className="font-mono text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground">The directory containing the generated public assets.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="settingsInstallCmd">Install Command</Label>
+              <Input
+                id="settingsInstallCmd"
+                value={installCommand}
+                onChange={(e) => setInstallCommand(e.target.value)}
+                placeholder="npm install"
+                className="font-mono text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground">The command used to install package dependencies.</p>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="border-t border-border/50 px-6 py-4 flex justify-end bg-muted/10">
+          <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
+            {isSavingSettings ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Settings"
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
   );
 }
 
