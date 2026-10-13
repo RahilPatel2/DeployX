@@ -6,7 +6,7 @@ export interface IIntegration extends Document {
   accessToken: string;
   refreshToken?: string;
   providerAccountId?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }

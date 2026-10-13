@@ -14,7 +14,7 @@ export interface IActivity extends Document {
 
 const ActivitySchema: Schema = new Schema(
   {
-    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     projectId: { type: Schema.Types.ObjectId, ref: 'Project' },
     type: { type: String, required: true },
     title: { type: String, required: true },
@@ -26,5 +26,9 @@ const ActivitySchema: Schema = new Schema(
     timestamps: true,
   }
 );
+
+// Indexes
+ActivitySchema.index({ userId: 1, createdAt: -1 });
+ActivitySchema.index({ projectId: 1, createdAt: -1 });
 
 export default mongoose.models.Activity || mongoose.model<IActivity>('Activity', ActivitySchema);

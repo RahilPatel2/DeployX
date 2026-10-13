@@ -6,7 +6,15 @@ export interface IProject extends Document {
   userId: mongoose.Types.ObjectId;
   framework: string;
   repository: string; // e.g., 'owner/repo'
+  repositoryId?: number;
+  repositoryOwner?: string;
+  repositoryName?: string;
+  repositoryVisibility?: 'public' | 'private';
+  defaultBranch?: string;
   branch: string;
+  rootDirectory?: string;
+  packageManager?: string;
+  deploymentMode?: 'static' | 'ssr';
   buildCommand: string;
   outputDirectory: string;
   installCommand: string;
@@ -20,10 +28,18 @@ const ProjectSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
-    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     framework: { type: String, default: 'Next.js' },
     repository: { type: String, required: true },
+    repositoryId: { type: Number },
+    repositoryOwner: { type: String },
+    repositoryName: { type: String },
+    repositoryVisibility: { type: String, enum: ['public', 'private'], default: 'public' },
+    defaultBranch: { type: String, default: 'main' },
     branch: { type: String, default: 'main' },
+    rootDirectory: { type: String, default: '' },
+    packageManager: { type: String, enum: ['npm', 'pnpm', 'yarn', 'bun'], default: 'npm' },
+    deploymentMode: { type: String, enum: ['static', 'ssr'], default: 'static' },
     buildCommand: { type: String, default: 'npm run build' },
     outputDirectory: { type: String, default: '.next' },
     installCommand: { type: String, default: 'npm install' },
@@ -34,5 +50,10 @@ const ProjectSchema: Schema = new Schema(
     timestamps: true,
   }
 );
+
+// Indexes
+ProjectSchema.index({ userId: 1, createdAt: -1 });
+ProjectSchema.index({ userId: 1, slug: 1 });
+ProjectSchema.index({ userId: 1, repository: 1 });
 
 export default mongoose.models.Project || mongoose.model<IProject>('Project', ProjectSchema);

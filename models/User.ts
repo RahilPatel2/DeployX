@@ -5,6 +5,7 @@ export interface IUser extends Document {
   username: string;
   email: string;
   passwordHash: string;
+  status: 'active' | 'disabled';
   createdAt: Date;
   updatedAt: Date;
   emailVerified?: Date;
@@ -16,14 +17,15 @@ export interface IUser extends Document {
 
 const UserSchema: Schema = new Schema(
   {
-    name: { type: String, required: true },
-    username: { type: String, required: true, unique: true },
-    email: { type: String, required: true, unique: true, lowercase: true },
+    name: { type: String, required: true, trim: true, maxlength: 64 },
+    username: { type: String, required: true, unique: true, lowercase: true, trim: true, maxlength: 32 },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true, maxlength: 128 },
     passwordHash: { type: String, required: true },
+    status: { type: String, enum: ['active', 'disabled'], default: 'active' },
     emailVerified: { type: Date },
     avatar: { type: String },
-    bio: { type: String, default: "" },
-    phone: { type: String, default: "" },
+    bio: { type: String, default: "", maxlength: 500 },
+    phone: { type: String, default: "", maxlength: 32 },
     lastLogin: { type: Date },
   },
   {
