@@ -4,7 +4,7 @@ import Project from "@/models/Project";
 import Deployment from "@/models/Deployment";
 import { getSession } from "@/lib/auth/session";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const session = await getSession();
     if (!session || !session.userId) {

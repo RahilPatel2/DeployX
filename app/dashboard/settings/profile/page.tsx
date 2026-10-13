@@ -13,9 +13,15 @@ import useSWR from "swr";
 
 const fetcher = async (url: string) => {
   const res = await fetch(url);
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      window.location.replace("/login?redirect=/dashboard/settings/profile");
+    }
+    throw new Error("Unauthorized");
+  }
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.error || "Failed to fetch");
+    throw new Error(json.error || "Failed to fetch profile");
   }
   return json;
 };
@@ -30,18 +36,19 @@ export default function ProfileSettingsPage() {
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data, error, isLoading } = useSWR("/api/auth/profile", fetcher);
-
-  useEffect(() => {
-    if (data?.user) {
-      setName(data.user.name || "");
-      setUsername(data.user.username || "");
-      setEmail(data.user.email || "");
-      setPhone(data.user.phone || "");
-      setBio(data.user.bio || "");
-      if (data.user.avatar) setAvatar(data.user.avatar);
-    }
-  }, [data]);
+  const { data, error, isLoading, mutate } = useSWR("/api/auth/profile", fetcher, {
+    revalidateOnFocus: false,
+    onSuccess: (resData) => {
+      if (resData?.user) {
+        setName(resData.user.name || "");
+        setUsername(resData.user.username || "");
+        setEmail(resData.user.email || "");
+        setPhone(resData.user.phone || "");
+        setBio(resData.user.bio || "");
+        if (resData.user.avatar) setAvatar(resData.user.avatar);
+      }
+    },
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -70,23 +77,43 @@ export default function ProfileSettingsPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to update profile");
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "Failed to update profile");
       }
 
       toast.success("Profile updated successfully");
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred");
+      await mutate();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An error occurred";
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
   };
 
   if (isLoading) {
-    return <div className="p-8 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+    return (
+      <div className="p-12 flex flex-col items-center justify-center space-y-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Loading profile...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="p-8 text-destructive">Failed to load profile.</div>;
+    return (
+      <Card className="bg-destructive/5 border-destructive/20 p-6">
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-destructive">Unable to load profile</h4>
+          <p className="text-xs text-muted-foreground">
+            {error.message || "We encountered an issue retrieving your account details."}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => mutate()}>
+            Try again
+          </Button>
+        </div>
+      </Card>
+    );
   }
 
   return (

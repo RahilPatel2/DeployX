@@ -1,13 +1,19 @@
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/session";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { TopNav } from "@/components/dashboard/top-nav";
 import { CommandPalette } from "@/components/command-palette";
 import { FloatingAssistant } from "@/components/ai/floating-assistant";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getSession();
+  if (!session || !session.userId) {
+    redirect("/login");
+  }
   return (
     <div className="flex min-h-screen w-full bg-background">
       <Sidebar />

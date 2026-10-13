@@ -1,9 +1,9 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { GitFork, Loader2, FolderKanban } from "lucide-react";
 import Link from "next/link";
 import useSWR from "swr";
@@ -26,9 +26,23 @@ interface Deployment {
   projectName?: string; 
 }
 
-export function RecentDeploymentsTable({ projectId }: { projectId?: string }) {
-  const url = projectId ? `/api/deployments?projectId=${projectId}` : `/api/deployments`;
-  const { data, error, isLoading } = useSWR<{ deployments: Deployment[] }>(url, fetcher, { refreshInterval: 5000 });
+export function RecentDeploymentsTable({
+  projectId,
+  initialStatus,
+  search,
+}: {
+  projectId?: string;
+  initialStatus?: string;
+  search?: string;
+}) {
+  const queryParams = new URLSearchParams();
+  if (projectId) queryParams.set("projectId", projectId);
+  if (initialStatus && initialStatus !== "all") queryParams.set("status", initialStatus);
+  if (search && search.trim()) queryParams.set("search", search.trim());
+
+  const qs = queryParams.toString();
+  const url = `/api/deployments${qs ? `?${qs}` : ""}`;
+  const { data, isLoading } = useSWR<{ deployments: Deployment[] }>(url, fetcher, { refreshInterval: 5000 });
 
   const deployments = data?.deployments || [];
 

@@ -3,23 +3,62 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { ExternalLink, GitFork, GitBranch, Clock, Calendar, CheckCircle2, Loader2, XCircle } from "lucide-react";
+import {
+  ExternalLink,
+  GitFork,
+  GitBranch,
+  Clock,
+  Calendar,
+  CheckCircle2,
+  Loader2,
+  XCircle,
+  RotateCw,
+  History,
+} from "lucide-react";
 import Link from "next/link";
 import { LogViewer } from "@/components/deployments/log-viewer";
-import { use } from "react";
+import { use, useState } from "react";
 import useSWR from "swr";
 import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function DeploymentDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
+  const router = useRouter();
+  const [redeploying, setRedeploying] = useState(false);
 
   // Poll every 3 seconds if building or queued
   const { data, error, isLoading } = useSWR(`/api/deployments/${params.id}`, fetcher, {
     refreshInterval: (data) => 
       data?.deployment && ['QUEUED', 'BUILDING'].includes(data.deployment.status) ? 3000 : 0
   });
+
+  const handleRedeploy = async () => {
+    setRedeploying(true);
+    try {
+      const res = await fetch(`/api/deployments/${params.id}/redeploy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to trigger redeployment");
+      }
+
+      const d = await res.json();
+      toast.success("Redeployment initiated successfully");
+      router.push(`/dashboard/deployments/${d.deployment._id}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast.error(msg);
+    } finally {
+      setRedeploying(false);
+    }
+  };
 
   if (isLoading) {
     return <div className="p-8 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
@@ -32,7 +71,6 @@ export default function DeploymentDetailPage(props: { params: Promise<{ id: stri
   const deployment = data.deployment;
 
   const isTerminal = ['READY', 'FAILED', 'CANCELED'].includes(deployment.status);
-  const isSuccess = deployment.status === 'READY';
   const isFailed = deployment.status === 'FAILED';
 
   const getStatusBadge = () => {
@@ -71,14 +109,42 @@ export default function DeploymentDetailPage(props: { params: Promise<{ id: stri
                 {deployment.commitHash.substring(0, 7)}
               </span>
             )}
+            {deployment.environment && (
+              <Badge variant="secondary" className="text-[10px] uppercase font-mono">
+                {deployment.environment}
+              </Badge>
+            )}
+            {deployment.trigger && (
+              <Badge variant="outline" className="text-[10px] font-mono capitalize">
+                {deployment.trigger}
+              </Badge>
+            )}
           </div>
+          {deployment.commitMessage && (
+            <p className="text-xs text-muted-foreground font-mono pt-0.5">
+              &quot;{deployment.commitMessage}&quot;
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {deployment.url && (
             <a href={`https://${deployment.url}`} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "outline" })}>
-              Visit Preview <ExternalLink className="ml-2 h-4 w-4" />
+              Visit Live Site <ExternalLink className="ml-2 h-4 w-4" />
             </a>
           )}
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleRedeploy}
+            disabled={redeploying || !isTerminal}
+          >
+            {redeploying ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RotateCw className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Redeploy
+          </Button>
         </div>
       </div>
 
@@ -106,8 +172,14 @@ export default function DeploymentDetailPage(props: { params: Promise<{ id: stri
               })}
             </div>
             {isFailed && (
-               <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm flex items-center gap-2">
-                  <XCircle className="h-4 w-4" /> Deployment failed during build phase. Check logs for details.
+               <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm flex items-start gap-2">
+                  <XCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Deployment failed</p>
+                    <p className="text-xs text-destructive/90 mt-0.5">
+                      {deployment.errorMessage || "Deployment failed during the build phase. Inspect logs below for details."}
+                    </p>
+                  </div>
                </div>
             )}
           </CardContent>
@@ -117,15 +189,38 @@ export default function DeploymentDetailPage(props: { params: Promise<{ id: stri
           <CardHeader>
             <CardTitle>Metadata</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 text-sm">
+          <CardContent className="space-y-3.5 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4" /> Duration</span>
-              <span className="font-medium">{deployment.duration || '-'}</span>
+              <span className="font-medium">{deployment.duration ? `${deployment.duration}s` : '-'}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground flex items-center gap-2"><Calendar className="h-4 w-4" /> Created</span>
               <span className="font-medium">{formatDistanceToNow(new Date(deployment.createdAt))} ago</span>
             </div>
+            {deployment.startedAt && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground flex items-center gap-2"><Clock className="h-4 w-4" /> Started</span>
+                <span className="font-medium">{formatDistanceToNow(new Date(deployment.startedAt))} ago</span>
+              </div>
+            )}
+            {deployment.completedAt && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Completed</span>
+                <span className="font-medium">{formatDistanceToNow(new Date(deployment.completedAt))} ago</span>
+              </div>
+            )}
+            {deployment.previousDeploymentId && (
+              <div className="flex items-center justify-between pt-1 border-t border-border/40">
+                <span className="text-muted-foreground flex items-center gap-2"><History className="h-4 w-4" /> Source</span>
+                <Link
+                  href={`/dashboard/deployments/${deployment.previousDeploymentId}`}
+                  className="font-mono text-xs text-primary hover:underline"
+                >
+                  #{deployment.previousDeploymentId.slice(-6)}
+                </Link>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

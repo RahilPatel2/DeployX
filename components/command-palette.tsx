@@ -96,7 +96,13 @@ export function CommandPalette({ ...props }: DialogProps) {
             <Bell className="mr-2 h-4 w-4" />
             <span>Notifications</span>
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => { fetch("/api/auth/logout", { method: "POST" }).then(() => { window.location.href = "/login"; }).catch(() => { window.location.href = "/login"; }) })}>
+          <CommandItem onSelect={() => runCommand(async () => {
+            try {
+              await fetch("/api/auth/logout", { method: "POST" });
+            } finally {
+              window.location.replace("/login");
+            }
+          })}>
             <LogOut className="mr-2 h-4 w-4 text-destructive" />
             <span className="text-destructive">Log out</span>
           </CommandItem>

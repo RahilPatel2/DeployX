@@ -12,6 +12,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "movie/**",
+    "movies-by-patel/**",
+    "test-*.js",
+    "test-*.ts",
+    "test-*.mjs",
+    "inspect-*.mjs",
+    "sync-indexes.ts",
   ]),
 ]);
 

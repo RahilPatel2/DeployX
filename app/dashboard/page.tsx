@@ -23,8 +23,8 @@ async function getAnalyticsData() {
     const totalDeployments = deployments.length;
     let successCount = 0;
     
-    deployments.forEach((d: any) => {
-      if (d.status === 'ready' || d.status === 'success') successCount++;
+    deployments.forEach((d: { status?: string }) => {
+      if (d.status === 'READY' || d.status === 'ready' || d.status === 'success') successCount++;
     });
 
     const successRate = totalDeployments > 0 ? ((successCount / totalDeployments) * 100).toFixed(1) + '%' : '0.0%';

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { Loader2, Copy, Search, Maximize2, Trash } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Loader2, Copy, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import useSWR from "swr";
 
@@ -23,7 +23,7 @@ export function LogViewer({ deploymentId, status = "READY" }: { deploymentId: st
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [logs]);
+  }, [data?.logs]);
 
   return (
     <div className="rounded-md border border-border/50 bg-[#0c0c0c] overflow-hidden flex flex-col h-[600px] shadow-sm">

@@ -2,12 +2,20 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Key, MoreVertical, Search, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
-const mockEnvVars: any[] = [];
+interface EnvVarItem {
+  id: number;
+  key: string;
+  value: string;
+  envs: string[];
+  project: string;
+}
+
+const mockEnvVars: EnvVarItem[] = [];
 
 export default function EnvVarsPage() {
   const [showValues, setShowValues] = useState<Record<number, boolean>>({});
@@ -37,7 +45,7 @@ export default function EnvVarsPage() {
             <Key className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">No environment variables</h3>
             <p className="text-muted-foreground text-center max-w-md mb-6">
-              You haven't added any environment variables yet. Add secrets and configuration to be injected into your deployments.
+              You haven&apos;t added any environment variables yet. Add secrets and configuration to be injected into your deployments.
             </p>
             <Button>Add Variable</Button>
           </div>

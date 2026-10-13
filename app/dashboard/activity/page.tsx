@@ -7,12 +7,23 @@ import { formatDistanceToNow } from "date-fns";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-const IconMap: Record<string, any> = {
+import type { LucideIcon } from "lucide-react";
+
+interface ActivityRecord {
+  _id: string;
+  title: string;
+  description: string;
+  icon?: string;
+  color?: string;
+  createdAt: string;
+}
+
+const IconMap: Record<string, LucideIcon> = {
   Box, CheckCircle2, XCircle, Globe, Key, Activity: ActivityIcon, User, Trash, GitBranch
 };
 
 export default function ActivityPage() {
-  const { data, isLoading } = useSWR("/api/activity", fetcher);
+  const { data, isLoading } = useSWR<{ activities: ActivityRecord[] }>("/api/activity", fetcher);
   const activities = data?.activities || [];
 
   return (
@@ -41,8 +52,8 @@ export default function ActivityPage() {
             </div>
           ) : (
             <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
-              {activities.map((activity: any) => {
-                const IconComponent = IconMap[activity.icon] || ActivityIcon;
+              {activities.map((activity) => {
+                const IconComponent = (activity.icon && IconMap[activity.icon]) || ActivityIcon;
                 
                 return (
                   <div key={activity._id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
