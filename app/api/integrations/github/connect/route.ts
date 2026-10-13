@@ -1,36 +1,59 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
-import crypto from "crypto";
-import { cookies } from "next/headers";
+import { createOAuthState, OAUTH_STATE_COOKIE_NAME, OAUTH_STATE_MAX_AGE } from "@/lib/auth/oauth-state";
+import { checkRateLimit } from "@/lib/auth/rate-limit";
 
 export async function GET(req: Request) {
   try {
-    await requireAuth();
-    
-    const clientId = process.env.GITHUB_CLIENT_ID;
-    
-    if (!clientId) {
-      const url = new URL("/dashboard/projects/new", req.url);
-      url.searchParams.set("error", "GitHub OAuth App is not configured. Please set GITHUB_CLIENT_ID in your environment.");
-      return NextResponse.redirect(url);
+    const userId = await requireAuth(req);
+    const url = new URL(req.url);
+
+    // Rate limit connection initiations per user (max 10 / minute)
+    const rl = checkRateLimit(`gh_connect:${userId}`, 10, 60 * 1000);
+    const returnToParam = url.searchParams.get("returnTo") || url.searchParams.get("next");
+    const { state, encryptedCookie, returnTo } = createOAuthState(userId, returnToParam);
+
+    if (!rl.allowed) {
+      const redirectUrl = new URL(returnTo, req.url);
+      redirectUrl.searchParams.set("error", "Too many GitHub connection attempts. Please wait a minute and try again.");
+      return NextResponse.redirect(redirectUrl);
     }
 
-    const state = crypto.randomBytes(16).toString("hex");
-    
-    // Using cookies() returns a Promise in Next.js 16/15
-    const cookieStore = await cookies();
-    cookieStore.set("github_oauth_state", state, {
+    const clientId = process.env.GITHUB_CLIENT_ID?.trim();
+    const clientSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
+
+    if (!clientId || !clientSecret) {
+      const redirectUrl = new URL(returnTo, req.url);
+      redirectUrl.searchParams.set("error", "GitHub OAuth App is not configured. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.");
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    // Determine configured callback URL
+    const callbackUrl =
+      process.env.GITHUB_CALLBACK_URL?.trim() ||
+      `${process.env.NEXT_PUBLIC_APP_URL?.trim() || url.origin}/api/integrations/github/callback`;
+
+    // Request permissions: 'read:user' for profile display, 'repo' for project cloning and build detection
+    const requestedScope = url.searchParams.get("scope") === "public" ? "read:user" : "read:user,repo";
+
+    const githubAuthorizeUrl = new URL("https://github.com/login/oauth/authorize");
+    githubAuthorizeUrl.searchParams.set("client_id", clientId);
+    githubAuthorizeUrl.searchParams.set("redirect_uri", callbackUrl);
+    githubAuthorizeUrl.searchParams.set("scope", requestedScope);
+    githubAuthorizeUrl.searchParams.set("state", state);
+
+    const response = NextResponse.redirect(githubAuthorizeUrl);
+    response.cookies.set(OAUTH_STATE_COOKIE_NAME, encryptedCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       path: "/",
-      maxAge: 60 * 10 // 10 minutes
+      maxAge: OAUTH_STATE_MAX_AGE,
     });
 
-    const redirectUri = `${new URL(req.url).origin}/api/integrations/github/callback`;
-    const githubUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user&state=${state}`;
-
-    return NextResponse.redirect(githubUrl);
+    return response;
   } catch (error) {
+    console.error("GitHub connect initiation error:", error);
     const url = new URL("/login", req.url);
     return NextResponse.redirect(url);
   }
