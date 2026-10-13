@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import useSWR from "swr";
@@ -9,7 +10,8 @@ import { motion } from "framer-motion";
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function DeploymentActivityChart() {
-  const { data, isLoading } = useSWR("/api/analytics", fetcher);
+  const [range, setRange] = useState("7d");
+  const { data } = useSWR(`/api/analytics?range=${range}`, fetcher);
   
   // Use empty array if API doesn't have real chart data yet
   const chartData = data?.chartData || [];
@@ -26,7 +28,7 @@ export function DeploymentActivityChart() {
           <CardTitle>Deployment Activity</CardTitle>
           <CardDescription>Daily deployment frequency across all projects.</CardDescription>
         </div>
-        <Select defaultValue="7d">
+        <Select value={range} onValueChange={(val) => val && setRange(val)}>
           <SelectTrigger className="w-[120px] h-8">
             <SelectValue placeholder="Select range" />
           </SelectTrigger>
