@@ -1,24 +1,59 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import connectToDatabase from "@/lib/mongodb/client";
 import User from "@/models/User";
 import { getSession } from "@/lib/auth/session";
 import bcrypt from "bcryptjs";
 
+export async function POST(req: Request) {
+  return handlePasswordUpdate(req);
+}
+
 export async function PUT(req: Request) {
+  return handlePasswordUpdate(req);
+}
+
+async function handlePasswordUpdate(req: Request) {
   try {
     const session = await getSession(req);
-    if (!session || !session.userId) {
+    if (!session || !session.userId || !mongoose.isValidObjectId(session.userId)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { currentPassword, newPassword } = await req.json();
-
-    if (!currentPassword || !newPassword || typeof currentPassword !== "string" || typeof newPassword !== "string") {
-      return NextResponse.json({ error: "Current and new passwords are required" }, { status: 400 });
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ error: "Invalid request payload" }, { status: 400 });
     }
 
-    if (newPassword.length < 8 || newPassword.length > 128) {
-      return NextResponse.json({ error: "New password must be between 8 and 128 characters" }, { status: 400 });
+    const { currentPassword, newPassword } = body;
+
+    if (!currentPassword || typeof currentPassword !== "string") {
+      return NextResponse.json({ error: "Current password is required" }, { status: 400 });
+    }
+
+    if (!newPassword || typeof newPassword !== "string") {
+      return NextResponse.json({ error: "New password is required" }, { status: 400 });
+    }
+
+    if (newPassword.length < 8) {
+      return NextResponse.json(
+        { error: "New password must be at least 8 characters long" },
+        { status: 400 }
+      );
+    }
+
+    if (newPassword.length > 128) {
+      return NextResponse.json(
+        { error: "New password must be 128 characters or fewer" },
+        { status: 400 }
+      );
+    }
+
+    if (currentPassword === newPassword) {
+      return NextResponse.json(
+        { error: "New password must be different from current password" },
+        { status: 400 }
+      );
     }
 
     await connectToDatabase();
@@ -40,19 +75,23 @@ export async function PUT(req: Request) {
     await user.save();
 
     // Log Activity
-    const Activity = (await import("@/models/Activity")).default;
-    await Activity.create({
-      userId: session.userId,
-      type: "password_changed",
-      title: "Password Changed",
-      description: "Your account password was updated successfully.",
-      icon: "Shield",
-      color: "text-emerald-500",
-    });
+    try {
+      const Activity = (await import("@/models/Activity")).default;
+      await Activity.create({
+        userId: session.userId,
+        type: "password_changed",
+        title: "Password Changed",
+        description: "Your account password was updated successfully.",
+        icon: "Shield",
+        color: "text-emerald-500",
+      });
+    } catch {
+      // Non-fatal
+    }
 
     return NextResponse.json({ message: "Password updated successfully" }, { status: 200 });
-  } catch (error) {
-    console.error("Change password error:", error);
+  } catch (error: unknown) {
+    console.error("[Change Password Error]:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
