@@ -17,23 +17,30 @@ async function getAnalyticsData() {
     // Concurrently fetch counts
     const [projectCount, deployments] = await Promise.all([
       Project.countDocuments({ userId }),
-      Deployment.find({ userId }).select('status createdAt').lean()
+      Deployment.find({ userId }).select('status createdAt duration').lean()
     ]);
 
     const totalDeployments = deployments.length;
     let successCount = 0;
+    let failedCount = 0;
+    const durations: number[] = [];
     
-    deployments.forEach((d: { status?: string }) => {
+    deployments.forEach((d: { status?: string; duration?: number }) => {
       if (d.status === 'READY' || d.status === 'ready' || d.status === 'success') successCount++;
+      if (d.status === 'FAILED' || d.status === 'failed') failedCount++;
+      if (typeof d.duration === 'number' && d.duration > 0) durations.push(d.duration);
     });
 
-    const successRate = totalDeployments > 0 ? ((successCount / totalDeployments) * 100).toFixed(1) + '%' : '0.0%';
+    const finished = successCount + failedCount;
+    const successRate = finished > 0 ? ((successCount / finished) * 100).toFixed(1) + '%' : '0.0%';
+    const avgDuration = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+    const avgBuildTime = avgDuration > 0 ? `${avgDuration}s` : '0s';
 
     return {
       activeProjects: projectCount,
       totalDeployments,
       successRate,
-      avgBuildTime: "N/A"
+      avgBuildTime
     };
   } catch (error) {
     return { activeProjects: 0, totalDeployments: 0, successRate: "0.0%", avgBuildTime: "0s" };
