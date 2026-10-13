@@ -56,8 +56,35 @@ export async function DELETE(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Cascade delete project deployments and domains to maintain referential integrity
+    // Cascade delete project deployments, domains, and webhook deliveries
     await Deployment.deleteMany({ projectId: project._id, userId: session.userId });
+
+    // Clean up registered GitHub webhook if applicable
+    if (project.githubWebhookId) {
+      try {
+        const Integration = (await import("@/models/Integration")).default;
+        const integration = await Integration.findOne({ userId: session.userId, provider: "github" });
+        const [owner, repo] = (project.repository || "").split("/");
+        if (integration?.accessToken && owner && repo) {
+          const { deleteRepositoryWebhook } = await import("@/lib/github/webhook");
+          await deleteRepositoryWebhook(
+            integration.accessToken,
+            owner,
+            repo,
+            project.githubWebhookId
+          ).catch(() => {});
+        }
+      } catch {
+        // Non-critical cleanup
+      }
+    }
+
+    try {
+      const WebhookDelivery = (await import("@/models/WebhookDelivery")).default;
+      await WebhookDelivery.deleteMany({ projectId: project._id });
+    } catch {
+      // Ignore if model not available
+    }
     
     try {
       const Domain = (await import("@/models/Domain")).default;
@@ -109,6 +136,7 @@ export async function PATCH(
       rootDirectory,
       packageManager,
       deploymentMode,
+      autoDeploy,
     } = body;
 
     await connectToDatabase();
@@ -120,6 +148,7 @@ export async function PATCH(
 
     if (name && typeof name === "string") project.name = name.trim();
     if (branch && typeof branch === "string") project.branch = branch.trim();
+    if (autoDeploy !== undefined && typeof autoDeploy === "boolean") project.autoDeploy = autoDeploy;
     if (buildCommand !== undefined && typeof buildCommand === "string") project.buildCommand = buildCommand.trim();
     if (outputDirectory !== undefined && typeof outputDirectory === "string") project.outputDirectory = outputDirectory.trim();
     if (installCommand !== undefined && typeof installCommand === "string") project.installCommand = installCommand.trim();

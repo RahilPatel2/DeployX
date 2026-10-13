@@ -176,6 +176,33 @@ export async function POST(req: Request) {
       console.warn("Cloudflare Pages project registration note:", errMsg);
     }
 
+    // 5.5 Generate webhook secret & attempt automatic webhook registration
+    const { generateWebhookSecret, getWebhookUrl, createRepositoryWebhook } = await import("@/lib/github/webhook");
+    const { encryptToken } = await import("@/lib/auth/encryption");
+    const rawWebhookSecret = generateWebhookSecret();
+    const encryptedWebhookSecret = encryptToken(rawWebhookSecret);
+
+    let githubWebhookId: number | undefined;
+    let webhookStatus: "active" | "inactive" | "manual" | "failed" = "inactive";
+
+    if (integration.accessToken && repoOwner && repoName) {
+      try {
+        const webhookUrl = getWebhookUrl(req);
+        const reg = await createRepositoryWebhook(
+          integration.accessToken,
+          repoOwner,
+          repoName,
+          webhookUrl,
+          rawWebhookSecret
+        );
+        webhookStatus = reg.status;
+        githubWebhookId = reg.webhookId;
+      } catch (hookErr) {
+        console.warn("GitHub webhook auto-registration note:", hookErr);
+        webhookStatus = "manual";
+      }
+    }
+
     // 6. Create the project in MongoDB Atlas
     const project = await Project.create({
       name: cleanName,
@@ -196,6 +223,10 @@ export async function POST(req: Request) {
       outputDirectory: outputDirectory || ".next",
       installCommand: installCommand || "npm install",
       cloudflareProjectName,
+      autoDeploy: true,
+      webhookSecret: encryptedWebhookSecret,
+      githubWebhookId,
+      webhookStatus,
       // Do not create a fake live URL; productionUrl will be populated after real deployment
       productionUrl: undefined,
     });
