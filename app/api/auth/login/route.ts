@@ -3,38 +3,88 @@ import bcrypt from "bcryptjs";
 import connectToDatabase from "@/lib/mongodb/client";
 import User from "@/models/User";
 import { createSession } from "@/lib/auth/session";
+import { checkRateLimit, resetRateLimit } from "@/lib/auth/rate-limit";
 import * as z from "zod";
 
 const loginSchema = z.object({
-  identifier: z.string().min(1),
-  password: z.string().min(1),
+  identifier: z.string().trim().min(1, "Email or username is required").max(128),
+  password: z.string().min(1, "Password is required").max(128),
+  remember: z.boolean().optional(),
 });
+
+// Dummy hash to defend against timing attacks when user does not exist
+const DUMMY_HASH = "$2a$10$abcdefghijklmnopqrstuvwxyz123456789012345678901234567890";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    
-    const parsedData = loginSchema.safeParse(body);
-    if (!parsedData.success) {
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown-ip";
+
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
       return NextResponse.json(
-        { error: "Invalid credentials" },
+        { error: "Invalid JSON request payload" },
         { status: 400 }
       );
     }
-    
-    const { identifier, password } = parsedData.data;
 
-    await connectToDatabase();
+    const parsedData = loginSchema.safeParse(body);
+    if (!parsedData.success) {
+      const firstIssue = parsedData.error.issues[0]?.message || "Invalid credentials provided";
+      return NextResponse.json({ error: firstIssue }, { status: 400 });
+    }
+
+    const { identifier, password } = parsedData.data;
+    const normalizedIdentifier = identifier.toLowerCase().trim();
+    const rateLimitKey = `login:${clientIp}:${normalizedIdentifier}`;
+
+    // Rate limiting check: 5 failed attempts per 15 minutes
+    const rateCheck = checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: `Too many failed login attempts. Please try again in ${rateCheck.retryAfterSeconds} seconds.`,
+          retryAfterSeconds: rateCheck.retryAfterSeconds,
+        },
+        { status: 429 }
+      );
+    }
+
+    try {
+      await connectToDatabase();
+    } catch (dbError: unknown) {
+      const dbMsg = dbError instanceof Error ? dbError.message : "Database connection failed";
+      console.error("[Auth/Login] Database connection error:", dbMsg);
+      return NextResponse.json(
+        { error: "Database service temporarily unavailable. Please try again shortly." },
+        { status: 503 }
+      );
+    }
 
     // Find by email or username
     const user = await User.findOne({
-      $or: [{ email: identifier }, { username: identifier }],
+      $or: [
+        { email: normalizedIdentifier },
+        { username: identifier.trim() },
+        { username: normalizedIdentifier },
+      ],
     });
 
     if (!user) {
+      // Execute dummy compare to mitigate timing side-channel attacks
+      await bcrypt.compare(password, DUMMY_HASH).catch(() => false);
       return NextResponse.json(
         { error: "Incorrect username or password." },
         { status: 401 }
+      );
+    }
+
+    // Check account status
+    if (user.status === "disabled") {
+      return NextResponse.json(
+        { error: "This account has been disabled. Please contact support." },
+        { status: 403 }
       );
     }
 
@@ -47,22 +97,46 @@ export async function POST(req: Request) {
       );
     }
 
-    // Update lastLogin
+    // Reset rate limit on successful credentials
+    resetRateLimit(rateLimitKey);
+
+    // Update lastLogin timestamp
     user.lastLogin = new Date();
     await user.save();
 
-    // Create secure session
-    await createSession(user._id.toString());
+    // Issue fresh session
+    const sessionToken = await createSession(user._id.toString());
 
-    return NextResponse.json(
-      { message: "Logged in successfully" },
+    const response = NextResponse.json(
+      {
+        success: true,
+        message: "Logged in successfully",
+        user: {
+          id: user._id.toString(),
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          avatar: user.avatar || "",
+        },
+      },
       { status: 200 }
     );
 
-  } catch (error) {
-    console.error("Login error:", error);
+    response.cookies.set("session", sessionToken, {
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      maxAge: 7 * 24 * 60 * 60,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+
+    return response;
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[Auth/Login] Unexpected login error:", errMessage);
     return NextResponse.json(
-      { error: "Something went wrong. Please try again." },
+      { error: "An unexpected error occurred. Please try again." },
       { status: 500 }
     );
   }

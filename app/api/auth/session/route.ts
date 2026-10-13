@@ -3,9 +3,11 @@ import { getSession } from "@/lib/auth/session";
 import connectToDatabase from "@/lib/mongodb/client";
 import User from "@/models/User";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const session = await getSession();
+    const cookieHeader = req.headers.get("cookie");
+    const cookieToken = cookieHeader?.match(/session=([^;]+)/)?.[1];
+    const session = await getSession(cookieToken);
     if (!session || !session.userId) {
       return NextResponse.json({ user: null }, { status: 401 });
     }

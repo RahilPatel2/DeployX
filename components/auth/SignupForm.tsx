@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,12 +15,13 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { cn } from "@/lib/utils";
+import { getSafeRedirectUrl } from "@/lib/auth/redirect";
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
   username: z.string().min(3, "Username must be at least 3 characters").regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, underscores, and dashes"),
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters").regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"),
+  password: z.string().min(8, "Password must be at least 8 characters").regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/, "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"),
   confirmPassword: z.string(),
   agree: z.boolean().refine((val) => val === true, {
     message: "You must agree to the Terms & Privacy Policy",
@@ -47,12 +48,11 @@ function checkPasswordStrength(password: string): number {
 }
 
 function SignupFormInner() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const redirectUrl = searchParams.get('redirect') || "/dashboard";
+  const redirectUrl = getSafeRedirectUrl(searchParams.get('redirect'), "/dashboard");
 
   const {
     register,
@@ -100,9 +100,10 @@ function SignupFormInner() {
         return;
       }
 
-      window.location.href = redirectUrl;
-    } catch (err: any) {
-      setServerError(err?.message || "Network error. Please try again later.");
+      window.location.replace(redirectUrl);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network error. Please try again later.";
+      setServerError(msg);
       setIsLoading(false);
     }
   };

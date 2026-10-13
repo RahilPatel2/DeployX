@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -13,26 +13,39 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, CreditCard, LogOut, Code } from "lucide-react";
-import useSWR from "swr";
+import { User, Settings, CreditCard, LogOut, Code, Loader2 } from "lucide-react";
+import useSWR, { mutate } from "swr";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error("Failed to fetch user");
+  }
+  return res.json();
+};
 
 export function UserButton() {
-  const router = useRouter();
-  const { data } = useSWR("/api/auth/profile", fetcher);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { data, error } = useSWR("/api/auth/profile", fetcher, {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+  });
 
   const user = data?.user;
 
-  if (!user) return null;
+  // If unauthenticated or profile error, do not render user button
+  if (error || !user) return null;
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
+      // Evict all cached SWR data
+      await mutate(() => true, undefined, { revalidate: false });
     } catch (e) {
-      console.error("Logout error", e);
+      console.error("[Auth] Logout error:", e);
     } finally {
-      window.location.href = "/login";
+      window.location.replace("/login");
     }
   };
 
@@ -76,9 +89,17 @@ export function UserButton() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+        <DropdownMenuItem
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+        >
+          {isLoggingOut ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin text-destructive" />
+          ) : (
+            <LogOut className="mr-2 h-4 w-4" />
+          )}
+          <span>{isLoggingOut ? "Logging out..." : "Log out"}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

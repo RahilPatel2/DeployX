@@ -19,6 +19,7 @@ const protectedPaths = [
 export async function proxy(req: NextRequest) {
   const sessionCookie = req.cookies.get("session")?.value;
   let isLoggedIn = false;
+  let hasMalformedCookie = false;
 
   if (sessionCookie) {
     try {
@@ -28,6 +29,7 @@ export async function proxy(req: NextRequest) {
       isLoggedIn = true;
     } catch {
       isLoggedIn = false;
+      hasMalformedCookie = true;
     }
   }
 
@@ -39,7 +41,11 @@ export async function proxy(req: NextRequest) {
     if (isLoggedIn) {
       return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
     }
-    return NextResponse.next();
+    const res = NextResponse.next();
+    if (hasMalformedCookie) {
+      res.cookies.delete("session");
+    }
+    return res;
   }
 
   if (!isLoggedIn && isProtected) {
@@ -48,6 +54,9 @@ export async function proxy(req: NextRequest) {
     redirectUrl.searchParams.set("redirect", originalPath);
     const response = NextResponse.redirect(redirectUrl);
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    if (hasMalformedCookie || sessionCookie) {
+      response.cookies.delete("session");
+    }
     return response;
   }
 

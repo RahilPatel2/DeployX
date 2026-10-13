@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { cn } from "@/lib/utils";
+import { getSafeRedirectUrl } from "@/lib/auth/redirect";
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Email or username is required"),
@@ -25,12 +26,11 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 function LoginFormInner() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const redirectUrl = searchParams.get('redirect') || "/dashboard";
+  const redirectUrl = getSafeRedirectUrl(searchParams.get('redirect'), "/dashboard");
 
   const {
     register,
@@ -72,9 +72,10 @@ function LoginFormInner() {
         return;
       }
 
-      window.location.href = redirectUrl;
-    } catch (err: any) {
-      setServerError(err?.message || "Network error. Please try again later.");
+      window.location.replace(redirectUrl);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Network error. Please try again later.";
+      setServerError(msg);
       setIsLoading(false);
     }
   };

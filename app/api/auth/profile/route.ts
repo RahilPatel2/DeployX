@@ -1,38 +1,40 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import connectToDatabase from "@/lib/mongodb/client";
 import User from "@/models/User";
 import { getSession } from "@/lib/auth/session";
 
 export async function GET(req: Request) {
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
+    const session = await getSession(req);
+    if (!session || !session.userId || !mongoose.isValidObjectId(session.userId)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectToDatabase();
     
-    const user = await User.findById(session.userId).select('-passwordHash');
+    const user = await User.findById(session.userId).select("-passwordHash").lean();
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     return NextResponse.json({ user });
-  } catch (error) {
-    console.error("Profile GET error:", error);
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[Profile GET error]:", errMessage);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
 export async function PUT(req: Request) {
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
+    const session = await getSession(req);
+    if (!session || !session.userId || !mongoose.isValidObjectId(session.userId)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
-    const { name, email, avatar, phone, bio } = body;
+    const { name, avatar, phone, bio } = body;
 
     await connectToDatabase();
 
@@ -41,11 +43,10 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    if (name !== undefined) user.name = name;
-    if (email !== undefined) user.email = email;
-    if (avatar !== undefined) user.avatar = avatar;
-    if (phone !== undefined) user.phone = phone;
-    if (bio !== undefined) user.bio = bio;
+    if (name !== undefined) user.name = String(name).trim().slice(0, 64);
+    if (avatar !== undefined) user.avatar = String(avatar).slice(0, 200000); // 200KB limit
+    if (phone !== undefined) user.phone = String(phone).trim().slice(0, 32);
+    if (bio !== undefined) user.bio = String(bio).trim().slice(0, 500);
 
     await user.save();
 
@@ -64,8 +65,9 @@ export async function PUT(req: Request) {
     delete userObj.passwordHash;
 
     return NextResponse.json({ user: userObj });
-  } catch (error) {
-    console.error("Profile PUT error:", error);
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[Profile PUT error]:", errMessage);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

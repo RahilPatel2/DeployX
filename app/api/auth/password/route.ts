@@ -6,15 +6,19 @@ import bcrypt from "bcryptjs";
 
 export async function PUT(req: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(req);
     if (!session || !session.userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { currentPassword, newPassword } = await req.json();
 
-    if (!currentPassword || !newPassword) {
+    if (!currentPassword || !newPassword || typeof currentPassword !== "string" || typeof newPassword !== "string") {
       return NextResponse.json({ error: "Current and new passwords are required" }, { status: 400 });
+    }
+
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      return NextResponse.json({ error: "New password must be between 8 and 128 characters" }, { status: 400 });
     }
 
     await connectToDatabase();
