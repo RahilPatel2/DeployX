@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { clearSession } from "@/lib/auth/session";
+import { clearSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from "@/lib/auth/session";
 
 export async function POST() {
   try {
@@ -11,13 +11,10 @@ export async function POST() {
     );
 
     // Explicitly append cookie clearing header on the response object
-    response.cookies.set("session", "", {
+    response.cookies.set(SESSION_COOKIE_NAME, "", {
+      ...SESSION_COOKIE_OPTIONS,
       expires: new Date(0),
       maxAge: 0,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
     });
 
     return response;
@@ -46,13 +43,10 @@ export async function GET(req: Request) {
 
   const url = new URL("/login", req.url);
   const response = NextResponse.redirect(url);
-  response.cookies.set("session", "", {
+  response.cookies.set(SESSION_COOKIE_NAME, "", {
+    ...SESSION_COOKIE_OPTIONS,
     expires: new Date(0),
     maxAge: 0,
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
   });
 
   return response;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import connectToDatabase from "@/lib/mongodb/client";
 import User from "@/models/User";
-import { createSession } from "@/lib/auth/session";
+import { createSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from "@/lib/auth/session";
 import { checkRateLimit, resetRateLimit } from "@/lib/auth/rate-limit";
 import * as z from "zod";
 
@@ -122,13 +122,9 @@ export async function POST(req: Request) {
       { status: 200 }
     );
 
-    response.cookies.set("session", sessionToken, {
-      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      maxAge: 7 * 24 * 60 * 60,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
+    response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
+      ...SESSION_COOKIE_OPTIONS,
+      expires: new Date(Date.now() + SESSION_COOKIE_OPTIONS.maxAge * 1000),
     });
 
     return response;

@@ -5,6 +5,17 @@ import mongoose from "mongoose";
 const secretKey = process.env.JWT_SECRET || "default_development_secret_key";
 const key = new TextEncoder().encode(secretKey);
 
+export const SESSION_COOKIE_NAME = "session";
+export const SESSION_DURATION_SECONDS = 7 * 24 * 60 * 60; // 7 days
+
+export const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge: SESSION_DURATION_SECONDS,
+};
+
 export interface SessionPayload extends JWTPayload {
   userId: string;
 }
@@ -18,10 +29,15 @@ export async function encrypt(payload: JWTPayload): Promise<string> {
 }
 
 export async function decrypt(input: string): Promise<SessionPayload | null> {
+  if (!input || typeof input !== "string") return null;
   try {
     const { payload } = await jwtVerify(input, key, {
       algorithms: ["HS256"],
+      clockTolerance: 15,
     });
+    if (!payload || typeof payload !== "object" || !payload.userId) {
+      return null;
+    }
     return payload as SessionPayload;
   } catch {
     return null;
@@ -29,24 +45,25 @@ export async function decrypt(input: string): Promise<SessionPayload | null> {
 }
 
 export async function createSession(userId: string): Promise<string> {
-  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  const expires = new Date(Date.now() + SESSION_DURATION_SECONDS * 1000);
   const sessionToken = await encrypt({ userId, expires: expires.toISOString() });
 
   try {
     const cookieStore = await cookies();
-    cookieStore.set("session", sessionToken, {
+    cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
+      ...SESSION_COOKIE_OPTIONS,
       expires,
-      maxAge: 7 * 24 * 60 * 60,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
     });
   } catch {
     // Graceful fallback when cookies() is accessed outside request scope
   }
 
   return sessionToken;
+}
+
+export async function rotateSession(userId: string): Promise<string> {
+  await clearSession();
+  return await createSession(userId);
 }
 
 function extractTokenFromRequest(req: Request): string | undefined {
@@ -105,15 +122,22 @@ export async function requireAuth(tokenOrReq?: string | Request): Promise<string
 export async function clearSession(): Promise<void> {
   try {
     const cookieStore = await cookies();
-    cookieStore.set("session", "", {
+    cookieStore.set(SESSION_COOKIE_NAME, "", {
+      ...SESSION_COOKIE_OPTIONS,
       expires: new Date(0),
       maxAge: 0,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
     });
   } catch {
     // Handled on response object
   }
+}
+
+export function getSessionCookieHeader(token: string): string {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  return `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; Max-Age=${SESSION_DURATION_SECONDS}; HttpOnly; SameSite=Lax${secure}`;
+}
+
+export function getClearSessionCookieHeader(): string {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  return `${SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax${secure}`;
 }
