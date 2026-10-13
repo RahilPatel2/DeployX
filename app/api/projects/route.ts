@@ -6,6 +6,8 @@ import { getSession } from "@/lib/auth/session";
 import { decryptToken } from "@/lib/auth/encryption";
 import { CloudflareProvider } from "@/lib/cloudflare/provider";
 
+import Deployment from "@/models/Deployment";
+
 export async function GET(req: Request) {
   try {
     const session = await getSession(req);
@@ -13,15 +15,138 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get("search");
+    const framework = searchParams.get("framework");
+    const sortField = searchParams.get("sort") || "createdAt";
+    const sortOrder = searchParams.get("order")?.toLowerCase() === "asc" ? 1 : -1;
+    const page = Math.max(parseInt(searchParams.get("page") || "1", 10), 1);
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "20", 10), 1), 100);
+    const skip = (page - 1) * limit;
+
     await connectToDatabase();
 
-    // Fetch projects scoped strictly to the authenticated user
-    const projects = await Project.find({ userId: session.userId })
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean();
+    const query: Record<string, unknown> = { userId: session.userId };
 
-    return NextResponse.json({ projects });
+    if (search && search.trim()) {
+      const sanitized = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      query.$or = [
+        { name: { $regex: sanitized, $options: "i" } },
+        { repository: { $regex: sanitized, $options: "i" } },
+        { slug: { $regex: sanitized, $options: "i" } },
+      ];
+    }
+
+    if (framework && framework !== "all") {
+      query.framework = { $regex: `^${framework.trim()}$`, $options: "i" };
+    }
+
+    // Allowlisted sort fields
+    const allowedSortFields: Record<string, string> = {
+      createdAt: "createdAt",
+      updatedAt: "updatedAt",
+      name: "name",
+    };
+    const resolvedSortField = allowedSortFields[sortField] || "createdAt";
+    const sortOptions: Record<string, 1 | -1> = { [resolvedSortField]: sortOrder };
+
+    // Fetch projects scoped strictly to the authenticated user
+    const [rawProjects, total] = await Promise.all([
+      Project.find(query)
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Project.countDocuments(query),
+    ]);
+
+    // Attach latest deployment for each project on this page
+    const projectIds = rawProjects.map((p) => p._id);
+    const latestDeploymentsAgg = projectIds.length > 0
+      ? await Deployment.aggregate([
+          { $match: { projectId: { $in: projectIds } } },
+          { $sort: { createdAt: -1 } },
+          {
+            $group: {
+              _id: "$projectId",
+              latestDeployment: { $first: "$$ROOT" },
+              readyUrls: {
+                $push: {
+                  $cond: [
+                    { $and: [{ $eq: ["$status", "READY"] }, { $ne: ["$url", null] }] },
+                    "$url",
+                    "$$REMOVE",
+                  ],
+                },
+              },
+              count: { $sum: 1 },
+            },
+          },
+        ])
+      : [];
+
+    const latestDepMap = new Map<
+      string,
+      { latest: Record<string, unknown>; readyUrl?: string; count: number }
+    >();
+    for (const item of latestDeploymentsAgg) {
+      latestDepMap.set(String(item._id), {
+        latest: item.latestDeployment,
+        readyUrl: Array.isArray(item.readyUrls) && item.readyUrls.length > 0 ? item.readyUrls[0] : undefined,
+        count: item.count,
+      });
+    }
+
+    const projects = rawProjects.map((proj) => {
+      const depInfo = latestDepMap.get(String(proj._id));
+      const latest = depInfo?.latest as {
+        _id?: unknown;
+        status?: string;
+        duration?: number;
+        environment?: string;
+        branch?: string;
+        commitHash?: string;
+        commitMessage?: string;
+        url?: string;
+        createdAt?: Date;
+      } | undefined;
+
+      const latestReadyUrl = depInfo?.readyUrl;
+
+      return {
+        ...proj,
+        deploymentCount: depInfo?.count || 0,
+        latestDeployment: latest
+          ? {
+              _id: latest._id,
+              status: latest.status,
+              duration: latest.duration,
+              environment: latest.environment,
+              branch: latest.branch,
+              commitHash: latest.commitHash,
+              commitMessage: latest.commitMessage,
+              url: latest.url,
+              createdAt: latest.createdAt,
+            }
+          : null,
+        // Computed status for UI badge
+        status: latest?.status ? latest.status.toLowerCase() : "no_deployments",
+        // Fallback to latest ready deployment live URL if project productionUrl is unset
+        liveUrl: proj.productionUrl || latestReadyUrl || (latest?.status === "READY" ? latest.url : undefined),
+      };
+    });
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return NextResponse.json({
+      projects,
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    });
   } catch (error) {
     console.error("Projects GET error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
