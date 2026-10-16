@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { buttonVariants } from "@/components/ui/button";
 import { GitFork, Loader2, FolderKanban } from "lucide-react";
 import Link from "next/link";
@@ -133,9 +134,7 @@ export function RecentDeploymentsTable({
                     </div>
                   </TableCell>
                   <TableCell>
-                    {dep.status === "READY" && <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20">Ready</Badge>}
-                    {['BUILDING', 'QUEUED'].includes(dep.status) && <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border-blue-500/20 animate-pulse">{dep.status.toLowerCase()}</Badge>}
-                    {['FAILED', 'CANCELED'].includes(dep.status) && <Badge variant="destructive" className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20">{dep.status.toLowerCase()}</Badge>}
+                    <StatusBadge status={dep.status} size="sm" />
                   </TableCell>
                   <TableCell className="text-right pr-6 text-muted-foreground text-sm">
                     <div className="flex flex-col items-end">
