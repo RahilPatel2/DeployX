@@ -33,7 +33,8 @@ export function verifyWebhookSignature(
   }
 
   const providedHex = signatureHeader.slice(7).trim();
-  if (!providedHex || !secret) {
+  // Ensure the provided signature is exactly a 64-character hex string (SHA-256)
+  if (!providedHex || !/^[0-9a-f]{64}$/i.test(providedHex) || !secret) {
     return false;
   }
 

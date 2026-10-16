@@ -51,34 +51,27 @@ export async function POST(req: Request) {
     const deliveryId = req.headers.get("x-github-delivery");
     const signature = req.headers.get("x-hub-signature-256");
 
-    if (!event) {
-      return NextResponse.json({ error: "Missing X-GitHub-Event header" }, { status: 400 });
+    if (!event || typeof event !== "string" || event.length > 64) {
+      return NextResponse.json({ error: "Invalid or missing X-GitHub-Event header" }, { status: 400 });
     }
 
-    if (!deliveryId) {
-      return NextResponse.json({ error: "Missing X-GitHub-Delivery header" }, { status: 400 });
+    if (!deliveryId || typeof deliveryId !== "string" || deliveryId.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(deliveryId)) {
+      return NextResponse.json({ error: "Invalid or missing X-GitHub-Delivery header" }, { status: 400 });
     }
 
-    // Ping event verification (GitHub sends ping upon webhook creation)
-    if (event === "ping") {
-      return NextResponse.json(
-        { message: "Ping received successfully. Webhook connection active.", deliveryId },
-        { status: 200 }
-      );
-    }
-
-    // Safe ignore for unsupported events
-    if (event !== "push") {
-      return NextResponse.json(
-        { message: `Event '${event}' safely ignored. DeployX only deploys on 'push'.`, ignored: true },
-        { status: 200 }
-      );
-    }
-
+    // Require signature header on all webhook events
     if (!signature) {
       return NextResponse.json(
         { error: "Missing signature header X-Hub-Signature-256" },
         { status: 401 }
+      );
+    }
+
+    // Safe ignore for unsupported events other than push and ping
+    if (event !== "push" && event !== "ping") {
+      return NextResponse.json(
+        { message: `Event '${event}' safely ignored. DeployX only processes 'push' and 'ping'.`, ignored: true },
+        { status: 200 }
       );
     }
 
@@ -141,6 +134,18 @@ export async function POST(req: Request) {
       project.lastWebhookError = "Invalid HMAC-SHA256 signature";
       await project.save();
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+
+    // Acknowledge verified ping event from GitHub
+    if (event === "ping") {
+      project.webhookStatus = "active";
+      project.lastWebhookStatus = "success";
+      project.lastWebhookPayloadAt = new Date();
+      await project.save();
+      return NextResponse.json(
+        { message: "Ping verified and acknowledged successfully.", deliveryId },
+        { status: 200 }
+      );
     }
 
     // 6. Idempotency Check: Prevent duplicate processing of the same delivery ID
