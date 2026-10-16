@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   ExternalLink,
@@ -73,27 +74,17 @@ export default function DeploymentDetailPage(props: { params: Promise<{ id: stri
   const isTerminal = ['READY', 'FAILED', 'CANCELED'].includes(deployment.status);
   const isFailed = deployment.status === 'FAILED';
 
-  const getStatusBadge = () => {
-    switch (deployment.status) {
-      case 'READY': return <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 pointer-events-none">Ready</Badge>;
-      case 'FAILED': return <Badge variant="destructive" className="pointer-events-none">Failed</Badge>;
-      case 'QUEUED': return <Badge variant="secondary" className="pointer-events-none">Queued</Badge>;
-      case 'BUILDING': return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 pointer-events-none animate-pulse">Building</Badge>;
-      default: return <Badge variant="outline" className="pointer-events-none">{deployment.status}</Badge>;
-    }
-  };
-
   const steps = ["QUEUED", "BUILDING", "READY"];
   const currentStepIndex = steps.indexOf(deployment.status) !== -1 ? steps.indexOf(deployment.status) : (isFailed ? 1 : 0);
 
   return (
-    <div className="flex-1 space-y-6 p-8 pt-6 max-w-7xl mx-auto w-full">
+    <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6 max-w-7xl mx-auto w-full">
       <div className="flex flex-col md:flex-row md:items-start justify-between space-y-4 md:space-y-0">
         <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <h2 className="text-3xl font-bold tracking-tight">Deployment</h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Deployment</h2>
             <Badge variant="outline" className="font-mono text-xs text-muted-foreground">{deployment._id}</Badge>
-            {getStatusBadge()}
+            <StatusBadge status={deployment.status} size="default" />
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <Link href={`/dashboard/projects/${deployment.projectId}`} className="hover:text-foreground transition-colors font-medium text-foreground">
