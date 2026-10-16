@@ -225,9 +225,9 @@ export default function ProfileSettingsPage() {
               onClick={() => !uploadingAvatar && fileInputRef.current?.click()}
               title="Click to upload new avatar"
             >
-              <Avatar className="h-24 w-24 border-2 border-border/60 shadow-sm">
+              <Avatar className="h-20 w-20 sm:h-24 sm:w-24 border-2 border-border/60 shadow-sm">
                 <AvatarImage src={avatarUrl || ""} alt={name || "Avatar"} />
-                <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">
+                <AvatarFallback className="text-xl sm:text-2xl font-bold bg-primary/10 text-primary">
                   {name ? name.substring(0, 2).toUpperCase() : "DX"}
                 </AvatarFallback>
               </Avatar>

@@ -90,7 +90,7 @@ export default function DangerZonePage() {
             </p>
           </div>
         </CardContent>
-        <CardFooter className="border-t border-destructive/20 px-6 py-4 flex justify-between items-center bg-destructive/10">
+        <CardFooter className="border-t border-destructive/20 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 bg-destructive/10">
           <p className="text-xs text-destructive/80 font-medium">This action cannot be undone.</p>
           <Button
             variant="destructive"

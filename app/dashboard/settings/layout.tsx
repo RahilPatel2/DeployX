@@ -21,27 +21,30 @@ const sidebarNavItems = [
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex-1 space-y-6 p-8 pt-6 max-w-6xl mx-auto w-full">
-      <div className="space-y-0.5">
-        <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-        <p className="text-muted-foreground">Manage your account settings and preferences.</p>
+    <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6 max-w-6xl mx-auto w-full">
+      <div className="space-y-1">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h2>
+        <p className="text-sm text-muted-foreground">Manage your account settings, preferences, and integrations.</p>
       </div>
-      <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
-        <aside className="-mx-4 lg:w-1/5">
-          <nav className="flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1 px-4">
+      <div className="flex flex-col space-y-6 lg:flex-row lg:space-x-10 lg:space-y-0">
+        <aside className="w-full lg:w-56 shrink-0">
+          <nav
+            aria-label="Settings navigation"
+            className="flex space-x-1 sm:space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1 overflow-x-auto pb-2 lg:pb-0 scrollbar-thin"
+          >
             {sidebarNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-xs sm:text-sm font-medium hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors shrink-0 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <item.icon className="h-4 w-4" />
-                {item.title}
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span>{item.title}</span>
               </Link>
             ))}
           </nav>
         </aside>
-        <div className="flex-1">{children}</div>
+        <div className="flex-1 min-w-0">{children}</div>
       </div>
     </div>
   );
