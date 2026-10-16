@@ -27,7 +27,9 @@ export async function POST(req: Request) {
     await connectToDatabase();
 
     // 1. Enforce Project Ownership server-side
-    const project = await Project.findOne({ _id: projectId, userId: session.userId });
+    const project = await Project.findOne({ _id: projectId, userId: session.userId })
+      .select("_id framework deploymentMode rootDirectory buildCommand outputDirectory branch cloudflareProjectName")
+      .lean();
     if (!project) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
@@ -39,7 +41,9 @@ export async function POST(req: Request) {
       userId: session.userId,
       status: { $in: ["QUEUED", "BUILDING"] },
       createdAt: { $gt: new Date(Date.now() - 30 * 1000) },
-    });
+    })
+      .select("_id status createdAt")
+      .lean();
 
     if (activeRecentDeployment) {
       return NextResponse.json(
@@ -245,7 +249,12 @@ export async function GET(req: Request) {
     }
 
     const [deployments, total] = await Promise.all([
-      Deployment.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Deployment.find(query)
+        .select("-logs")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       Deployment.countDocuments(query),
     ]);
 
