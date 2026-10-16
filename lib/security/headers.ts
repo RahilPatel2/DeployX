@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+
 /**
  * Security Headers Configuration for DeployX
  * Standardized security headers enforcing defense-in-depth against
@@ -49,9 +51,26 @@ export const SECURITY_HEADERS = [
   },
 ];
 
+export const ANTI_CACHE_HEADERS: Record<string, string> = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+  "Pragma": "no-cache",
+  "Expires": "0",
+  "Surrogate-Control": "no-store",
+};
+
 export function getSecurityHeadersRecord(): Record<string, string> {
   return SECURITY_HEADERS.reduce((acc, { key, value }) => {
     acc[key] = value;
     return acc;
   }, {} as Record<string, string>);
+}
+
+/**
+ * Applies anti-caching headers to a NextResponse to prevent browser and CDN disk caching of sensitive data.
+ */
+export function applyAntiCacheHeaders(response: NextResponse): NextResponse {
+  for (const [key, value] of Object.entries(ANTI_CACHE_HEADERS)) {
+    response.headers.set(key, value);
+  }
+  return response;
 }
