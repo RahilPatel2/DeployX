@@ -4,6 +4,7 @@ import { DeploymentActivityChart } from "@/components/dashboard/deployment-chart
 import { RecentDeploymentsTable } from "@/components/dashboard/recent-deployments";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
+import mongoose from "mongoose";
 import connectToDatabase from "@/lib/mongodb/client";
 import { requireAuth } from "@/lib/auth/session";
 import Deployment from "@/models/Deployment";
@@ -13,34 +14,58 @@ async function getAnalyticsData() {
   try {
     const userId = await requireAuth();
     await connectToDatabase();
-    
-    // Concurrently fetch counts
-    const [projectCount, deployments] = await Promise.all([
-      Project.countDocuments({ userId }),
-      Deployment.find({ userId }).select('status createdAt duration').lean()
+
+    const userObjectId = new mongoose.Types.ObjectId(String(userId));
+
+    // Concurrently fetch project count and run a single-pass aggregation in MongoDB
+    const [projectCount, aggResult] = await Promise.all([
+      Project.countDocuments({ userId: userObjectId }),
+      Deployment.aggregate([
+        { $match: { userId: userObjectId } },
+        {
+          $group: {
+            _id: null,
+            totalDeployments: { $sum: 1 },
+            readyCount: {
+              $sum: {
+                $cond: [{ $in: ["$status", ["READY", "ready", "success"]] }, 1, 0],
+              },
+            },
+            failedCount: {
+              $sum: {
+                $cond: [{ $in: ["$status", ["FAILED", "failed"]] }, 1, 0],
+              },
+            },
+            avgDuration: {
+              $avg: {
+                $cond: [{ $gt: ["$duration", 0] }, "$duration", null],
+              },
+            },
+          },
+        },
+      ]),
     ]);
 
-    const totalDeployments = deployments.length;
-    let successCount = 0;
-    let failedCount = 0;
-    const durations: number[] = [];
-    
-    deployments.forEach((d: { status?: string; duration?: number }) => {
-      if (d.status === 'READY' || d.status === 'ready' || d.status === 'success') successCount++;
-      if (d.status === 'FAILED' || d.status === 'failed') failedCount++;
-      if (typeof d.duration === 'number' && d.duration > 0) durations.push(d.duration);
-    });
+    const stats = aggResult[0] || {
+      totalDeployments: 0,
+      readyCount: 0,
+      failedCount: 0,
+      avgDuration: 0,
+    };
 
-    const finished = successCount + failedCount;
-    const successRate = finished > 0 ? ((successCount / finished) * 100).toFixed(1) + '%' : '0.0%';
-    const avgDuration = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
-    const avgBuildTime = avgDuration > 0 ? `${avgDuration}s` : '0s';
+    const totalDeployments = stats.totalDeployments || 0;
+    const readyCount = stats.readyCount || 0;
+    const failedCount = stats.failedCount || 0;
+    const finished = readyCount + failedCount;
+    const successRate = finished > 0 ? ((readyCount / finished) * 100).toFixed(1) + "%" : "0.0%";
+    const avgDuration = stats.avgDuration ? Math.round(stats.avgDuration) : 0;
+    const avgBuildTime = avgDuration > 0 ? `${avgDuration}s` : "0s";
 
     return {
       activeProjects: projectCount,
       totalDeployments,
       successRate,
-      avgBuildTime
+      avgBuildTime,
     };
   } catch {
     return { activeProjects: 0, totalDeployments: 0, successRate: "0.0%", avgBuildTime: "0s" };
