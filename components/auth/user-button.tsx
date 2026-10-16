@@ -29,6 +29,7 @@ export function UserButton() {
   const { data, error } = useSWR("/api/auth/profile", fetcher, {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
+    dedupingInterval: 60000,
   });
 
   const user = data?.user;
