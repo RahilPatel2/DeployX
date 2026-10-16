@@ -13,13 +13,12 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const page = Math.max(parseInt(searchParams.get("page") || "1", 10), 1);
-    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "20", 10), 1), 100);
-    const skip = (page - 1) * limit;
+    const { parsePagination, sanitizeSearchTerm } = await import("@/lib/security/sanitize");
+    const { page, limit, skip } = parsePagination(searchParams, 20, 100);
 
     const projectId = searchParams.get("projectId");
-    const type = searchParams.get("type");
-    const category = searchParams.get("category");
+    const type = sanitizeSearchTerm(searchParams.get("type"), 100);
+    const category = sanitizeSearchTerm(searchParams.get("category"), 50);
 
     await connectToDatabase();
 

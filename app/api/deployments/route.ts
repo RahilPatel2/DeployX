@@ -197,10 +197,11 @@ export async function GET(req: Request) {
     const projectId = searchParams.get("projectId");
     const status = searchParams.get("status")?.toUpperCase();
     const branch = searchParams.get("branch");
-    const search = searchParams.get("search");
-    const page = Math.max(parseInt(searchParams.get("page") || "1", 10), 1);
-    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "20", 10), 1), 100);
-    const skip = (page - 1) * limit;
+    const rawSearch = searchParams.get("search");
+
+    const { escapeRegex, sanitizeSearchTerm, parsePagination } = await import("@/lib/security/sanitize");
+    const { page, limit, skip } = parsePagination(searchParams, 20, 100);
+    const sanitizedSearch = sanitizeSearchTerm(rawSearch, 80);
 
     await connectToDatabase();
 
@@ -230,15 +231,16 @@ export async function GET(req: Request) {
     }
 
     if (branch && branch.trim()) {
-      query.branch = branch.trim();
+      const sanitizedBranch = sanitizeSearchTerm(branch, 64);
+      query.branch = sanitizedBranch;
     }
 
-    if (search && search.trim()) {
-      const sanitizedSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (sanitizedSearch) {
+      const escaped = escapeRegex(sanitizedSearch);
       query.$or = [
-        { commitMessage: { $regex: sanitizedSearch, $options: "i" } },
-        { commitHash: { $regex: sanitizedSearch, $options: "i" } },
-        { branch: { $regex: sanitizedSearch, $options: "i" } },
+        { commitMessage: { $regex: escaped, $options: "i" } },
+        { commitHash: { $regex: escaped, $options: "i" } },
+        { branch: { $regex: escaped, $options: "i" } },
       ];
     }
 

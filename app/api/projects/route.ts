@@ -6,6 +6,8 @@ import { getSession } from "@/lib/auth/session";
 import { decryptToken } from "@/lib/auth/encryption";
 import { CloudflareProvider } from "@/lib/cloudflare/provider";
 
+import { escapeRegex, sanitizeSearchTerm, parsePagination, parseSort } from "@/lib/security/sanitize";
+
 import Deployment from "@/models/Deployment";
 
 export async function GET(req: Request) {
@@ -16,44 +18,35 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const search = searchParams.get("search");
+    const rawSearch = searchParams.get("search");
+    const sanitizedSearch = sanitizeSearchTerm(rawSearch, 80);
     const framework = searchParams.get("framework");
-    const sortField = searchParams.get("sort") || "createdAt";
-    const sortOrder = searchParams.get("order")?.toLowerCase() === "asc" ? 1 : -1;
-    const page = Math.max(parseInt(searchParams.get("page") || "1", 10), 1);
-    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "20", 10), 1), 100);
-    const skip = (page - 1) * limit;
+
+    const { page, limit, skip } = parsePagination(searchParams, 20, 100);
+    const { sortObject } = parseSort(searchParams, ["createdAt", "updatedAt", "name"] as const, "createdAt", "desc");
 
     await connectToDatabase();
 
     const query: Record<string, unknown> = { userId: session.userId };
 
-    if (search && search.trim()) {
-      const sanitized = search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (sanitizedSearch) {
+      const escaped = escapeRegex(sanitizedSearch);
       query.$or = [
-        { name: { $regex: sanitized, $options: "i" } },
-        { repository: { $regex: sanitized, $options: "i" } },
-        { slug: { $regex: sanitized, $options: "i" } },
+        { name: { $regex: escaped, $options: "i" } },
+        { repository: { $regex: escaped, $options: "i" } },
+        { slug: { $regex: escaped, $options: "i" } },
       ];
     }
 
     if (framework && framework !== "all") {
-      query.framework = { $regex: `^${framework.trim()}$`, $options: "i" };
+      const sanitizedFramework = sanitizeSearchTerm(framework, 32);
+      query.framework = { $regex: `^${escapeRegex(sanitizedFramework)}$`, $options: "i" };
     }
-
-    // Allowlisted sort fields
-    const allowedSortFields: Record<string, string> = {
-      createdAt: "createdAt",
-      updatedAt: "updatedAt",
-      name: "name",
-    };
-    const resolvedSortField = allowedSortFields[sortField] || "createdAt";
-    const sortOptions: Record<string, 1 | -1> = { [resolvedSortField]: sortOrder };
 
     // Fetch projects scoped strictly to the authenticated user
     const [rawProjects, total] = await Promise.all([
       Project.find(query)
-        .sort(sortOptions)
+        .sort(sortObject)
         .skip(skip)
         .limit(limit)
         .lean(),
