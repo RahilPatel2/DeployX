@@ -112,15 +112,16 @@ function LoginFormInner() {
             placeholder="name@example.com"
             disabled={isLoading}
             {...register("identifier")}
-            className="transition-all duration-200 focus-visible:ring-primary/50"
+            className="h-10 text-sm transition-all duration-200 focus-visible:ring-primary/40"
           />
           <AnimatePresence mode="wait">
             {errors.identifier && (
               <motion.p 
+                role="alert"
                 initial={{ opacity: 0, height: 0 }} 
                 animate={{ opacity: 1, height: "auto" }} 
                 exit={{ opacity: 0, height: 0 }} 
-                className="text-xs text-red-500 mt-1"
+                className="text-xs text-red-500 font-medium mt-1"
               >
                 {errors.identifier.message}
               </motion.p>
@@ -133,7 +134,7 @@ function LoginFormInner() {
             <Label htmlFor="password">Password</Label>
             <Link 
               href="/forgot-password" 
-              className="text-xs text-muted-foreground hover:text-primary transition-colors"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               Forgot password?
             </Link>
@@ -143,15 +144,15 @@ function LoginFormInner() {
             placeholder="••••••••"
             disabled={isLoading}
             {...register("password")}
-            className="transition-all duration-200 focus-visible:ring-primary/50"
           />
           <AnimatePresence mode="wait">
             {errors.password && (
               <motion.p 
+                role="alert"
                 initial={{ opacity: 0, height: 0 }} 
                 animate={{ opacity: 1, height: "auto" }} 
                 exit={{ opacity: 0, height: 0 }} 
-                className="text-xs text-red-500 mt-1"
+                className="text-xs text-red-500 font-medium mt-1"
               >
                 {errors.password.message}
               </motion.p>
@@ -177,18 +178,20 @@ function LoginFormInner() {
         <AnimatePresence mode="wait">
           {serverError && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
+              role="alert"
+              aria-live="assertive"
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-md"
+              exit={{ opacity: 0, y: -8 }}
+              className="p-3 text-xs sm:text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-md flex items-center gap-2"
             >
-              {serverError}
+              <span>{serverError}</span>
             </motion.div>
           )}
         </AnimatePresence>
 
         <motion.div variants={itemVariants} className="pt-2">
-          <Button type="submit" className="w-full relative overflow-hidden group" disabled={isLoading}>
+          <Button type="submit" className="w-full h-10 font-semibold relative overflow-hidden group shadow-xs" disabled={isLoading}>
             <span className={cn("transition-all duration-200 flex items-center justify-center", isLoading ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0")}>
               Sign In
             </span>

@@ -35,6 +35,7 @@ type SignupValues = z.infer<typeof signupSchema>;
 
 const strengthLabels = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
 const strengthColors = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-emerald-400", "bg-emerald-600"];
+const strengthTextColors = ["text-red-500", "text-orange-500", "text-yellow-500", "text-emerald-400", "text-emerald-500"];
 
 function checkPasswordStrength(password: string): number {
   let score = 0;
@@ -140,11 +141,11 @@ function SignupFormInner() {
             placeholder="John Doe"
             disabled={isLoading}
             {...register("fullName")}
-            className="transition-all duration-200 focus-visible:ring-primary/50"
+            className="h-10 text-sm transition-all duration-200 focus-visible:ring-primary/40"
           />
           <AnimatePresence mode="wait">
             {errors.fullName && (
-              <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 mt-1">
+              <motion.p role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 font-medium mt-1">
                 {errors.fullName.message}
               </motion.p>
             )}
@@ -158,11 +159,11 @@ function SignupFormInner() {
             placeholder="johndoe"
             disabled={isLoading}
             {...register("username")}
-            className="transition-all duration-200 focus-visible:ring-primary/50"
+            className="h-10 text-sm transition-all duration-200 focus-visible:ring-primary/40"
           />
           <AnimatePresence mode="wait">
             {errors.username && (
-              <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 mt-1">
+              <motion.p role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 font-medium mt-1">
                 {errors.username.message}
               </motion.p>
             )}
@@ -177,11 +178,11 @@ function SignupFormInner() {
             placeholder="name@example.com"
             disabled={isLoading}
             {...register("email")}
-            className="transition-all duration-200 focus-visible:ring-primary/50"
+            className="h-10 text-sm transition-all duration-200 focus-visible:ring-primary/40"
           />
           <AnimatePresence mode="wait">
             {errors.email && (
-              <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 mt-1">
+              <motion.p role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 font-medium mt-1">
                 {errors.email.message}
               </motion.p>
             )}
@@ -195,11 +196,10 @@ function SignupFormInner() {
             placeholder="••••••••"
             disabled={isLoading}
             {...register("password")}
-            className="transition-all duration-200 focus-visible:ring-primary/50"
           />
           <AnimatePresence mode="wait">
             {errors.password && (
-              <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 mt-1">
+              <motion.p role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 font-medium mt-1">
                 {errors.password.message}
               </motion.p>
             )}
@@ -208,7 +208,7 @@ function SignupFormInner() {
           {/* Password Strength Indicator */}
           {passwordValue && passwordValue.length > 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pt-2">
-              <div className="flex gap-1 h-1 w-full rounded-full overflow-hidden">
+              <div className="flex gap-1 h-1.5 w-full rounded-full overflow-hidden">
                 {[0, 1, 2, 3].map((level) => (
                   <div 
                     key={level} 
@@ -216,7 +216,7 @@ function SignupFormInner() {
                   />
                 ))}
               </div>
-              <p className={cn("text-xs mt-1 transition-colors duration-300 text-right", `text-${strengthColors[strength].replace('bg-', '')}`)}>
+              <p className={cn("text-xs mt-1 font-medium transition-colors duration-300 text-right", strengthTextColors[strength])}>
                 {strengthLabels[strength]}
               </p>
             </motion.div>
@@ -230,11 +230,10 @@ function SignupFormInner() {
             placeholder="••••••••"
             disabled={isLoading}
             {...register("confirmPassword")}
-            className="transition-all duration-200 focus-visible:ring-primary/50"
           />
           <AnimatePresence mode="wait">
             {errors.confirmPassword && (
-              <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 mt-1">
+              <motion.p role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 font-medium mt-1">
                 {errors.confirmPassword.message}
               </motion.p>
             )}
@@ -258,7 +257,7 @@ function SignupFormInner() {
             </Label>
             <AnimatePresence mode="wait">
               {errors.agree && (
-                <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 mt-1">
+                <motion.p role="alert" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="text-xs text-red-500 font-medium mt-1">
                   {errors.agree.message}
                 </motion.p>
               )}
@@ -269,10 +268,12 @@ function SignupFormInner() {
         <AnimatePresence mode="wait">
           {serverError && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
+              role="alert"
+              aria-live="assertive"
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-md"
+              exit={{ opacity: 0, y: -8 }}
+              className="p-3 text-xs sm:text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-md"
             >
               {serverError}
             </motion.div>
@@ -280,7 +281,7 @@ function SignupFormInner() {
         </AnimatePresence>
 
         <motion.div variants={itemVariants} className="pt-2">
-          <Button type="submit" className="w-full relative overflow-hidden group" disabled={isLoading}>
+          <Button type="submit" className="w-full h-10 font-semibold relative overflow-hidden group shadow-xs" disabled={isLoading}>
             <span className={cn("transition-all duration-200 flex items-center justify-center", isLoading ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0")}>
               Create Account
             </span>
