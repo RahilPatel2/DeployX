@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { redactSensitiveData } from "@/lib/security/redaction";
 
 if (typeof window !== "undefined") {
   throw new Error("connectToDatabase must only be called from server-side code.");
@@ -88,8 +89,9 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
         // Clean up cached promise on error so subsequent attempts can retry
         cached.promise = null;
         cached.conn = null;
-        console.error("[MongoDB] Connection failure:", errMessage);
-        throw err;
+        const sanitizedError = redactSensitiveData(errMessage, uri ? [uri] : undefined);
+        console.error("[MongoDB] Connection failure:", sanitizedError);
+        throw new Error(sanitizedError);
       }
     })();
   }
