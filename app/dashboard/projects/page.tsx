@@ -6,6 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Search,
   Plus,
@@ -175,37 +176,18 @@ export default function ProjectsPage() {
   }
 
   function renderStatusBadge(status?: string) {
-    const s = (status || "").toUpperCase();
-    if (s === "READY") {
+    if (!status) {
       return (
-        <Badge variant="default" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 flex items-center gap-1 font-medium">
-          <CheckCircle2 className="h-3 w-3" /> Ready
+        <Badge variant="outline" className="text-muted-foreground border-border/50 text-[11px] h-4.5 px-2">
+          No deployments
         </Badge>
       );
     }
-    if (s === "BUILDING" || s === "QUEUED") {
-      return (
-        <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20 flex items-center gap-1 font-medium animate-pulse">
-          <Loader2 className="h-3 w-3 animate-spin" /> {s.toLowerCase()}
-        </Badge>
-      );
-    }
-    if (s === "FAILED" || s === "CANCELED") {
-      return (
-        <Badge variant="destructive" className="bg-red-500/10 text-red-500 border-red-500/20 flex items-center gap-1 font-medium">
-          <AlertCircle className="h-3 w-3" /> {s.toLowerCase()}
-        </Badge>
-      );
-    }
-    return (
-      <Badge variant="outline" className="text-muted-foreground border-border/50 text-xs">
-        No deployments
-      </Badge>
-    );
+    return <StatusBadge status={status} size="sm" />;
   }
 
   return (
-    <div className="flex-1 space-y-6 p-8 pt-6 max-w-7xl mx-auto w-full">
+    <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6 max-w-7xl mx-auto w-full">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

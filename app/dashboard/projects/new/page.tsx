@@ -831,7 +831,7 @@ function NewProjectForm() {
 
 export default function NewProjectPage() {
   return (
-    <div className="flex-1 space-y-6 p-8 pt-6 max-w-5xl mx-auto w-full">
+    <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6 max-w-5xl mx-auto w-full">
       <Suspense
         fallback={
           <div className="flex items-center justify-center p-12">
