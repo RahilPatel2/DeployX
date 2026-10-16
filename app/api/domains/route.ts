@@ -88,3 +88,33 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await getSession(req);
+    if (!session || !session.userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const domainId = searchParams.get("id");
+
+    if (!domainId || !mongoose.isValidObjectId(domainId)) {
+      return NextResponse.json({ error: "Valid domain ID is required" }, { status: 400 });
+    }
+
+    await connectToDatabase();
+
+    // Enforce strict ownership check - prevent deleting domains of other users
+    const domain = await Domain.findOneAndDelete({ _id: domainId, userId: session.userId });
+    if (!domain) {
+      return NextResponse.json({ error: "Domain not found or access denied" }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: "Domain deleted successfully" }, { status: 200 });
+  } catch (error) {
+    console.error("Domains DELETE error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+

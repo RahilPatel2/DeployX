@@ -100,3 +100,58 @@ export async function GET(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession(req);
+    if (!session || !session.userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    if (!id || !mongoose.isValidObjectId(id)) {
+      return NextResponse.json({ error: "Deployment not found" }, { status: 404 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    if (body.action !== "cancel") {
+      return NextResponse.json({ error: "Unsupported deployment action" }, { status: 400 });
+    }
+
+    await connectToDatabase();
+
+    // Enforce user account isolation & ownership
+    const deployment = await Deployment.findOne({ _id: id, userId: session.userId });
+    if (!deployment) {
+      return NextResponse.json({ error: "Deployment not found" }, { status: 404 });
+    }
+
+    if (!["QUEUED", "BUILDING"].includes(deployment.status)) {
+      return NextResponse.json(
+        { error: `Cannot cancel deployment with status '${deployment.status}'.` },
+        { status: 400 }
+      );
+    }
+
+    deployment.status = "CANCELED";
+    deployment.logs = [
+      ...(Array.isArray(deployment.logs) ? deployment.logs : []),
+      `[DeployX] Deployment canceled by user at ${new Date().toISOString()}`,
+    ];
+    await deployment.save();
+
+    return NextResponse.json({
+      success: true,
+      message: "Deployment canceled successfully",
+      deployment,
+    });
+  } catch (error: unknown) {
+    console.error("Deployment PATCH error:", error);
+    const message = error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
