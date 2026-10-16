@@ -32,6 +32,132 @@ export function getEnvDiagnostics(): Record<string, boolean> {
   };
 }
 
+export interface ProductionEnvValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Strictly audits environment variables for production readiness.
+ * Validates formatting, entropy, protocol standards, and secret hygiene
+ * without exposing sensitive values.
+ */
+export function validateProductionEnv(env: Record<string, string | undefined> = process.env): ProductionEnvValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const isProd = env.NODE_ENV === "production";
+
+  // 1. Canonical Application URL
+  const appUrl = env.NEXT_PUBLIC_APP_URL?.trim();
+  if (!appUrl) {
+    if (isProd) {
+      errors.push("NEXT_PUBLIC_APP_URL must be defined in production.");
+    } else {
+      warnings.push("NEXT_PUBLIC_APP_URL is not set (defaulting to http://localhost:3000).");
+    }
+  } else {
+    try {
+      const parsed = new URL(appUrl);
+      if (appUrl.endsWith("/")) {
+        errors.push("NEXT_PUBLIC_APP_URL must not contain a trailing slash.");
+      }
+      if (isProd && parsed.protocol !== "https:") {
+        warnings.push("NEXT_PUBLIC_APP_URL should use HTTPS in production environments.");
+      }
+    } catch {
+      errors.push("NEXT_PUBLIC_APP_URL is not a valid HTTP/HTTPS URL.");
+    }
+  }
+
+  // 2. Authentication JWT Secret
+  const jwtSecret = env.JWT_SECRET?.trim();
+  if (!jwtSecret) {
+    errors.push("JWT_SECRET is required.");
+  } else if (jwtSecret === "default_development_secret_key") {
+    if (isProd) {
+      errors.push("Insecure default JWT_SECRET detected in production! Must be replaced with a high-entropy secret.");
+    } else {
+      warnings.push("Using default development secret for JWT_SECRET. Do not use in production.");
+    }
+  } else if (jwtSecret.length < 32) {
+    if (isProd) {
+      errors.push(`JWT_SECRET is too short (${jwtSecret.length} chars). Production secret must be at least 32 characters.`);
+    } else {
+      warnings.push("JWT_SECRET should be at least 32 characters for adequate HMAC entropy.");
+    }
+  }
+
+  // 3. MongoDB Configuration
+  const mongoUri = env.MONGODB_URI?.trim();
+  if (!mongoUri) {
+    errors.push("MONGODB_URI is required.");
+  } else if (!mongoUri.startsWith("mongodb://") && !mongoUri.startsWith("mongodb+srv://")) {
+    errors.push("MONGODB_URI must begin with 'mongodb://' or 'mongodb+srv://'.");
+  }
+
+  const mongoDb = env.MONGODB_DB?.trim();
+  if (mongoDb && !/^[a-zA-Z0-9_-]+$/.test(mongoDb)) {
+    errors.push("MONGODB_DB contains invalid characters. Use alphanumeric, dashes, and underscores only.");
+  }
+
+  // 4. GitHub OAuth Credentials
+  const ghClientId = env.GITHUB_CLIENT_ID?.trim();
+  if (!ghClientId) {
+    errors.push("GITHUB_CLIENT_ID is required.");
+  } else if (ghClientId.startsWith("REPLACE_")) {
+    errors.push("GITHUB_CLIENT_ID contains an unconfigured placeholder value.");
+  }
+
+  const ghClientSecret = env.GITHUB_CLIENT_SECRET?.trim();
+  if (!ghClientSecret) {
+    errors.push("GITHUB_CLIENT_SECRET is required.");
+  } else if (ghClientSecret.startsWith("REPLACE_")) {
+    errors.push("GITHUB_CLIENT_SECRET contains an unconfigured placeholder value.");
+  }
+
+  const ghCallback = env.GITHUB_CALLBACK_URL?.trim();
+  if (ghCallback) {
+    try {
+      new URL(ghCallback);
+    } catch {
+      errors.push("GITHUB_CALLBACK_URL is defined but is not a valid URL.");
+    }
+  }
+
+  // 5. Cloudflare Pages Credentials
+  const cfAccount = env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  if (!cfAccount) {
+    errors.push("CLOUDFLARE_ACCOUNT_ID is required.");
+  } else {
+    const cleanedAccount = cfAccount.length === 33 && !/^[a-f0-9]/i.test(cfAccount[0]) ? cfAccount.slice(1) : cfAccount;
+    if (!/^[a-f0-9]{32}$/i.test(cleanedAccount)) {
+      errors.push(`CLOUDFLARE_ACCOUNT_ID must be strictly 32 hexadecimal characters (received ${cfAccount.length} chars).`);
+    }
+  }
+
+  const cfToken = env.CLOUDFLARE_API_TOKEN?.trim();
+  if (!cfToken) {
+    errors.push("CLOUDFLARE_API_TOKEN is required.");
+  } else if (cfToken.startsWith("REPLACE_")) {
+    errors.push("CLOUDFLARE_API_TOKEN contains an unconfigured placeholder value.");
+  } else if (cfToken.length < 20) {
+    errors.push("CLOUDFLARE_API_TOKEN appears too short for a valid Cloudflare API token.");
+  }
+
+  // 6. Optional Encryption Key
+  const encKey = env.ENCRYPTION_KEY?.trim();
+  if (encKey && !/^[a-f0-9]{64}$/i.test(encKey)) {
+    errors.push("ENCRYPTION_KEY must be a 64-character hexadecimal string (32 bytes).");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
 export function validateEnv(): EnvReport {
   const required = [
     "MONGODB_URI",
@@ -48,14 +174,6 @@ export function validateEnv(): EnvReport {
     console.error(`\n\x1b[31m[DeployX Env] 🚨 Missing required environment variables:\x1b[0m`);
     missing.forEach((key) => console.error(`\x1b[31m  - ${key}\x1b[0m`));
     console.error(`\x1b[33mEnsure these are defined in your .env.local file. See .env.example for required names.\x1b[0m\n`);
-  }
-
-  // Format checks (without exposing values)
-  const cfAccount = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
-  if (cfAccount && !/^[a-f0-9]{32}$/i.test(cfAccount)) {
-    console.warn(
-      `\x1b[33m[DeployX Env] ⚠️ CLOUDFLARE_ACCOUNT_ID appears malformed (${cfAccount.length} chars). Cloudflare Account IDs are strictly 32 hexadecimal characters.\x1b[0m`
-    );
   }
 
   return {
