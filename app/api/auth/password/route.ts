@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import connectToDatabase from "@/lib/mongodb/client";
 import User from "@/models/User";
 import { getSession } from "@/lib/auth/session";
+import { checkRateLimit, resetRateLimit, getClientIp, getRateLimitHeaders } from "@/lib/auth/rate-limit";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
@@ -18,6 +19,22 @@ async function handlePasswordUpdate(req: Request) {
     const session = await getSession(req);
     if (!session || !session.userId || !mongoose.isValidObjectId(session.userId)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const clientIp = getClientIp(req);
+    const rateLimitKey = `password-change:${session.userId}:${clientIp}`;
+    const rateCheck = checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: `Too many password update attempts. Please try again in ${rateCheck.retryAfterSeconds} seconds.`,
+          retryAfterSeconds: rateCheck.retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(5, rateCheck.remaining, rateCheck.retryAfterSeconds),
+        }
+      );
     }
 
     const body = await req.json().catch(() => null);
@@ -73,6 +90,7 @@ async function handlePasswordUpdate(req: Request) {
 
     user.passwordHash = newPasswordHash;
     await user.save();
+    resetRateLimit(rateLimitKey);
 
     // Log Activity
     try {

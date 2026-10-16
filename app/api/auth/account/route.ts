@@ -10,12 +10,29 @@ import Deployment from "@/models/Deployment";
 import Integration from "@/models/Integration";
 import Activity from "@/models/Activity";
 import { getSession } from "@/lib/auth/session";
+import { checkRateLimit, getClientIp, getRateLimitHeaders } from "@/lib/auth/rate-limit";
 
 export async function DELETE(req: Request) {
   try {
     const session = await getSession(req);
     if (!session || !session.userId || !mongoose.isValidObjectId(session.userId)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const clientIp = getClientIp(req);
+    const rateLimitKey = `account-delete:${session.userId}:${clientIp}`;
+    const rateCheck = checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: `Too many attempts. Please try again in ${rateCheck.retryAfterSeconds} seconds.`,
+          retryAfterSeconds: rateCheck.retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(5, rateCheck.remaining, rateCheck.retryAfterSeconds),
+        }
+      );
     }
 
     const body = await req.json().catch(() => ({}));

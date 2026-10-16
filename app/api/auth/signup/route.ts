@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import connectToDatabase from "@/lib/mongodb/client";
 import User from "@/models/User";
 import { createSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from "@/lib/auth/session";
-import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { checkRateLimit, getClientIp, getRateLimitHeaders } from "@/lib/auth/rate-limit";
 import * as z from "zod";
 
 const signupSchema = z.object({
@@ -39,8 +39,8 @@ const signupSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    // 1. IP rate limiting for signup attempts
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown-ip";
+    // 1. IP rate limiting for signup attempts (max 10 accounts per hour per IP)
+    const clientIp = getClientIp(req);
     const rateCheck = checkRateLimit(`signup:${clientIp}`, 10, 60 * 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json(
@@ -50,7 +50,10 @@ export async function POST(req: Request) {
           error: `Too many signup attempts. Please try again in ${rateCheck.retryAfterSeconds} seconds.`,
           message: `Too many signup attempts. Please try again in ${rateCheck.retryAfterSeconds} seconds.`,
         },
-        { status: 429 }
+        {
+          status: 429,
+          headers: getRateLimitHeaders(10, rateCheck.remaining, rateCheck.retryAfterSeconds),
+        }
       );
     }
 

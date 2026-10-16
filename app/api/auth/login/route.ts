@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import connectToDatabase from "@/lib/mongodb/client";
 import User from "@/models/User";
 import { createSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from "@/lib/auth/session";
-import { checkRateLimit, resetRateLimit } from "@/lib/auth/rate-limit";
+import { checkRateLimit, resetRateLimit, getClientIp, getRateLimitHeaders } from "@/lib/auth/rate-limit";
 import * as z from "zod";
 
 const loginSchema = z.object({
@@ -17,7 +17,22 @@ const DUMMY_HASH = "$2a$10$abcdefghijklmnopqrstuvwxyz123456789012345678901234567
 
 export async function POST(req: Request) {
   try {
-    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown-ip";
+    const clientIp = getClientIp(req);
+
+    // IP-level defense against distributed scanning / brute force
+    const ipRateCheck = checkRateLimit(`login:ip:${clientIp}`, 25, 15 * 60 * 1000);
+    if (!ipRateCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: `Too many requests from this IP address. Please try again in ${ipRateCheck.retryAfterSeconds} seconds.`,
+          retryAfterSeconds: ipRateCheck.retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: getRateLimitHeaders(25, ipRateCheck.remaining, ipRateCheck.retryAfterSeconds),
+        }
+      );
+    }
 
     let body: unknown;
     try {
@@ -37,17 +52,20 @@ export async function POST(req: Request) {
 
     const { identifier, password } = parsedData.data;
     const normalizedIdentifier = identifier.toLowerCase().trim();
-    const rateLimitKey = `login:${clientIp}:${normalizedIdentifier}`;
+    const accountRateLimitKey = `login:account:${normalizedIdentifier}`;
 
-    // Rate limiting check: 5 failed attempts per 15 minutes
-    const rateCheck = checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000);
-    if (!rateCheck.allowed) {
+    // Account-level rate limiting check: 5 failed attempts per 15 minutes per target account
+    const accountRateCheck = checkRateLimit(accountRateLimitKey, 5, 15 * 60 * 1000);
+    if (!accountRateCheck.allowed) {
       return NextResponse.json(
         {
-          error: `Too many failed login attempts. Please try again in ${rateCheck.retryAfterSeconds} seconds.`,
-          retryAfterSeconds: rateCheck.retryAfterSeconds,
+          error: `Too many failed login attempts for this account. Please try again in ${accountRateCheck.retryAfterSeconds} seconds.`,
+          retryAfterSeconds: accountRateCheck.retryAfterSeconds,
         },
-        { status: 429 }
+        {
+          status: 429,
+          headers: getRateLimitHeaders(5, accountRateCheck.remaining, accountRateCheck.retryAfterSeconds),
+        }
       );
     }
 
@@ -98,7 +116,8 @@ export async function POST(req: Request) {
     }
 
     // Reset rate limit on successful credentials
-    resetRateLimit(rateLimitKey);
+    resetRateLimit(accountRateLimitKey);
+    resetRateLimit(`login:ip:${clientIp}`);
 
     // Update lastLogin timestamp
     user.lastLogin = new Date();
