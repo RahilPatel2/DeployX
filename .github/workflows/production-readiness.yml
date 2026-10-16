@@ -1,0 +1,50 @@
+name: Production Readiness & Quality Assurance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit-and-verify:
+    name: Lint, Test, & Production Build Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      NODE_ENV: test
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      JWT_SECRET: test_ci_high_entropy_jwt_secret_value_at_least_32_characters_long
+      MONGODB_URI: mongodb+srv://ci_test_user:ci_test_pass@cluster0.abcde.mongodb.net/?retryWrites=true&w=majority
+      MONGODB_DB: deployx_db
+      GITHUB_CLIENT_ID: Ov23ci_test_client_id
+      GITHUB_CLIENT_SECRET: ci_test_client_secret_at_least_40_chars_long_12345
+      CLOUDFLARE_ACCOUNT_ID: 0123456789abcdef0123456789abcdef
+      CLOUDFLARE_API_TOKEN: ci_test_cloudflare_api_token_longer_than_20_chars
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: TypeScript Type Checking
+        run: npm run typecheck
+
+      - name: Run Master Automated Test Suite
+        run: npm test
+
+      - name: Verify Production Next.js Build
+        run: npm run build
