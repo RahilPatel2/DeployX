@@ -12,6 +12,16 @@ export interface OAuthStatePayload {
 export const OAUTH_STATE_COOKIE_NAME = "github_oauth_state";
 export const OAUTH_STATE_MAX_AGE = 600; // 10 minutes
 
+// In-memory single-use replay protection cache
+const consumedNonces = new Set<string>();
+
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    // Periodically reset consumed nonces (TTL matches max age)
+    consumedNonces.clear();
+  }, OAUTH_STATE_MAX_AGE * 1000).unref?.();
+}
+
 /**
  * Creates an unpredictably random OAuth state nonce and an encrypted cookie value
  * that cryptographically binds the state to the user ID and destination URL.
@@ -20,7 +30,7 @@ export function createOAuthState(
   userId: string,
   rawReturnTo?: string | null
 ): { state: string; encryptedCookie: string; returnTo: string } {
-  const nonce = crypto.randomBytes(16).toString("hex");
+  const nonce = crypto.randomBytes(32).toString("hex");
   const returnTo = getSafeRedirectUrl(rawReturnTo, "/dashboard/settings/github");
   const expiresAt = Date.now() + OAUTH_STATE_MAX_AGE * 1000;
 
@@ -37,7 +47,7 @@ export function createOAuthState(
 
 /**
  * Verifies the OAuth state returned in the callback query parameter against
- * the encrypted state cookie and the current user's session ID.
+ * the encrypted state cookie and the current user's session ID using timing-safe comparisons.
  */
 export function verifyOAuthState(
   encryptedCookie: string | undefined,
@@ -46,7 +56,7 @@ export function verifyOAuthState(
 ): { valid: boolean; returnTo: string; error?: string } {
   const fallbackReturnTo = "/dashboard/settings/github";
 
-  if (!receivedState) {
+  if (!receivedState || typeof receivedState !== "string") {
     return { valid: false, returnTo: fallbackReturnTo, error: "Missing OAuth state parameter." };
   }
 
@@ -64,13 +74,39 @@ export function verifyOAuthState(
       return { valid: false, returnTo: safeReturnTo, error: "OAuth authorization expired. Please try connecting again." };
     }
 
-    if (!payload.nonce || payload.nonce !== receivedState) {
+    if (!payload.nonce || typeof payload.nonce !== "string") {
+      return { valid: false, returnTo: safeReturnTo, error: "Invalid OAuth state payload." };
+    }
+
+    // Check for replay attacks
+    if (consumedNonces.has(payload.nonce)) {
+      return { valid: false, returnTo: safeReturnTo, error: "OAuth state token already consumed. Replay attempt detected." };
+    }
+
+    // Timing-safe nonce equality check
+    const expectedNonceBuf = Buffer.from(payload.nonce, "utf-8");
+    const receivedNonceBuf = Buffer.from(receivedState, "utf-8");
+
+    if (
+      expectedNonceBuf.length !== receivedNonceBuf.length ||
+      !crypto.timingSafeEqual(expectedNonceBuf, receivedNonceBuf)
+    ) {
       return { valid: false, returnTo: safeReturnTo, error: "Invalid OAuth state. Potential CSRF attempt detected." };
     }
 
-    if (!payload.userId || payload.userId !== currentUserId) {
+    // Timing-safe userId equality check
+    const expectedUserBuf = Buffer.from(payload.userId || "", "utf-8");
+    const currentUserBuf = Buffer.from(currentUserId || "", "utf-8");
+
+    if (
+      expectedUserBuf.length !== currentUserBuf.length ||
+      !crypto.timingSafeEqual(expectedUserBuf, currentUserBuf)
+    ) {
       return { valid: false, returnTo: safeReturnTo, error: "OAuth session mismatch between initiator and current user." };
     }
+
+    // Mark nonce as consumed
+    consumedNonces.add(payload.nonce);
 
     return { valid: true, returnTo: safeReturnTo };
   } catch (err) {
