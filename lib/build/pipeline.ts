@@ -67,6 +67,15 @@ export function executeSandboxedCommand(
   onLog?: (line: string) => void
 ): Promise<CommandExecutionResult> {
   return new Promise((resolve, reject) => {
+    // Validate command security before spawning process
+    const { validateBuildCommand } = require("@/lib/security/command-sanitizer");
+    const cmdCheck = validateBuildCommand(command);
+    if (!cmdCheck.valid) {
+      const secErr = new Error(cmdCheck.error || "Prohibited command execution rejected.");
+      onLog?.(`[DeployX Security Alert] ${secErr.message}`);
+      return reject(secErr);
+    }
+
     // Whitelist only safe environment variables
     const safeEnv: Record<string, string> = {
       PATH: process.env.PATH || "",

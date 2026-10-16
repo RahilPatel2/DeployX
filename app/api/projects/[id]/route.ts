@@ -146,12 +146,35 @@ export async function PATCH(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    const { validateBuildCommand, validateOutputDirectory } = await import("@/lib/security/command-sanitizer");
+
     if (name && typeof name === "string") project.name = name.trim();
     if (branch && typeof branch === "string") project.branch = branch.trim();
     if (autoDeploy !== undefined && typeof autoDeploy === "boolean") project.autoDeploy = autoDeploy;
-    if (buildCommand !== undefined && typeof buildCommand === "string") project.buildCommand = buildCommand.trim();
-    if (outputDirectory !== undefined && typeof outputDirectory === "string") project.outputDirectory = outputDirectory.trim();
-    if (installCommand !== undefined && typeof installCommand === "string") project.installCommand = installCommand.trim();
+
+    if (buildCommand !== undefined && typeof buildCommand === "string") {
+      const check = validateBuildCommand(buildCommand);
+      if (!check.valid) {
+        return NextResponse.json({ error: check.error }, { status: 400 });
+      }
+      project.buildCommand = check.sanitized || "";
+    }
+
+    if (installCommand !== undefined && typeof installCommand === "string") {
+      const check = validateBuildCommand(installCommand);
+      if (!check.valid) {
+        return NextResponse.json({ error: check.error }, { status: 400 });
+      }
+      project.installCommand = check.sanitized || "";
+    }
+
+    if (outputDirectory !== undefined && typeof outputDirectory === "string") {
+      const check = validateOutputDirectory(outputDirectory);
+      if (!check.valid) {
+        return NextResponse.json({ error: check.error }, { status: 400 });
+      }
+      project.outputDirectory = check.sanitized || "";
+    }
 
     if (rootDirectory !== undefined && typeof rootDirectory === "string") {
       const { sanitizeRootDirectory } = await import("@/lib/github/framework");
