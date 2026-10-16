@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FolderKanban, Activity, Globe, GitBranch, Plus, ArrowUpRight } from "lucide-react";
-import { DeploymentActivityChart } from "@/components/dashboard/deployment-chart";
+import dynamic from "next/dynamic";
 import { RecentDeploymentsTable } from "@/components/dashboard/recent-deployments";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -9,6 +9,20 @@ import connectToDatabase from "@/lib/mongodb/client";
 import { requireAuth } from "@/lib/auth/session";
 import Deployment from "@/models/Deployment";
 import Project from "@/models/Project";
+
+const DeploymentActivityChart = dynamic(
+  () => import("@/components/dashboard/deployment-chart").then((m) => m.DeploymentActivityChart),
+  {
+    loading: () => (
+      <Card className="col-span-full lg:col-span-4 bg-card/50 backdrop-blur shadow-sm h-[380px] flex items-center justify-center border-border/50">
+        <div className="flex flex-col items-center gap-2 text-muted-foreground text-xs">
+          <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span>Loading activity visualization...</span>
+        </div>
+      </Card>
+    ),
+  }
+);
 
 async function getAnalyticsData() {
   try {

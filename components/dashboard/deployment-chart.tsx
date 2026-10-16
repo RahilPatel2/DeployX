@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
+import React, { useState } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import useSWR from "swr";
@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export function DeploymentActivityChart() {
+export const DeploymentActivityChart = React.memo(function DeploymentActivityChart() {
   const [range, setRange] = useState("7d");
   const { data } = useSWR(`/api/analytics?range=${range}`, fetcher);
   
@@ -92,4 +92,4 @@ export function DeploymentActivityChart() {
     </Card>
     </motion.div>
   );
-}
+});
