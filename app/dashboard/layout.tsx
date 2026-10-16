@@ -15,7 +15,7 @@ export default async function DashboardLayout({
     redirect("/login");
   }
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex flex-col md:flex-row min-h-screen w-full bg-background text-foreground antialiased selection:bg-primary/20">
       <Sidebar />
       <div className="flex-1 flex flex-col w-full min-w-0">
         <TopNav />
