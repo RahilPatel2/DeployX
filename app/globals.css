@@ -39,6 +39,11 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-status-queued: var(--status-queued);
+  --color-status-building: var(--status-building);
+  --color-status-ready: var(--status-ready);
+  --color-status-failed: var(--status-failed);
+  --color-status-canceled: var(--status-canceled);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -81,12 +86,19 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Status token colors (Light Mode) */
+  --status-queued: oklch(0.65 0.18 240);    /* Blue */
+  --status-building: oklch(0.75 0.16 75);   /* Amber */
+  --status-ready: oklch(0.62 0.19 145);     /* Emerald */
+  --status-failed: oklch(0.58 0.22 25);     /* Rose/Red */
+  --status-canceled: oklch(0.55 0 0);       /* Gray */
 }
 
 .dark {
-  --background: oklch(0 0 0); /* Pure black background for that Vercel/Linear feel */
+  --background: oklch(0 0 0); /* Pure black background for clean contrast */
   --foreground: oklch(0.98 0 0);
-  --card: oklch(0.12 0 0); /* slightly elevated */
+  --card: oklch(0.12 0 0); /* Slightly elevated surface */
   --card-foreground: oklch(0.98 0 0);
   --popover: oklch(0.12 0 0);
   --popover-foreground: oklch(0.98 0 0);
@@ -115,6 +127,13 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.2 0 0);
   --sidebar-ring: oklch(0.35 0 0);
+
+  /* Status token colors (Dark Mode) */
+  --status-queued: oklch(0.7 0.16 240);
+  --status-building: oklch(0.8 0.18 80);
+  --status-ready: oklch(0.72 0.2 145);
+  --status-failed: oklch(0.65 0.22 25);
+  --status-canceled: oklch(0.6 0 0);
 }
 
 @layer base {
@@ -126,5 +145,40 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+  }
+
+  /* High contrast focus ring for accessibility */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Sleek custom scrollbars for terminal and tables */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.25 0 0);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.35 0 0);
+  }
+}
+
+/* Reduced-motion accessibility overrides */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
