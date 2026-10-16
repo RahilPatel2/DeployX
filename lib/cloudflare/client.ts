@@ -6,6 +6,10 @@
  * and structured error handling.
  */
 
+if (typeof window !== "undefined") {
+  throw new Error("Cloudflare API client must strictly only be executed in server-side contexts.");
+}
+
 const CF_API_BASE = "https://api.cloudflare.com/client/v4";
 const DEFAULT_TIMEOUT_MS = 25000; // 25 seconds
 const MAX_SAFE_RETRIES = 2;
@@ -66,6 +70,18 @@ export function getCloudflareConfig(): { accountId: string; apiToken: string } {
   // Handle accidental leading non-hex character (e.g. stray prefix from copy-paste)
   if (accountId.length === 33 && !/^[a-f0-9]/i.test(accountId[0])) {
     accountId = accountId.slice(1);
+  }
+
+  if (!/^[a-f0-9]{32}$/i.test(accountId)) {
+    throw new CloudflareConfigError(
+      `Invalid CLOUDFLARE_ACCOUNT_ID format. Expected strictly 32 hexadecimal characters (received ${accountId.length} chars).`
+    );
+  }
+
+  if (apiToken.startsWith("REPLACE_") || apiToken.length < 20) {
+    throw new CloudflareConfigError(
+      "Invalid CLOUDFLARE_API_TOKEN. Token is unconfigured or does not meet minimum length criteria."
+    );
   }
 
   return { accountId, apiToken };
