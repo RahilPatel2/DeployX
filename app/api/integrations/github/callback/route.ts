@@ -5,6 +5,7 @@ import Integration from "@/models/Integration";
 import { requireAuth } from "@/lib/auth/session";
 import { verifyOAuthState, OAUTH_STATE_COOKIE_NAME } from "@/lib/auth/oauth-state";
 import { encryptToken } from "@/lib/auth/encryption";
+import { getGitHubOAuthConfig } from "@/lib/github/oauth-config";
 
 export async function GET(req: Request) {
   let userId: string;
@@ -72,10 +73,9 @@ export async function GET(req: Request) {
     return response;
   }
 
-  const clientId = process.env.GITHUB_CLIENT_ID?.trim();
-  const clientSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
+  const { clientId, clientSecret, callbackUrl, isConfigured } = getGitHubOAuthConfig(url.origin);
 
-  if (!clientId || !clientSecret) {
+  if (!isConfigured) {
     const redirectUrl = new URL(returnTo, req.url);
     redirectUrl.searchParams.set("error", "Server configuration error: GitHub credentials missing.");
     const response = NextResponse.redirect(redirectUrl);
@@ -84,9 +84,6 @@ export async function GET(req: Request) {
   }
 
   try {
-    const callbackUrl =
-      process.env.GITHUB_CALLBACK_URL?.trim() ||
-      `${process.env.NEXT_PUBLIC_APP_URL?.trim() || url.origin}/api/integrations/github/callback`;
 
     // 1. Exchange authorization code for access token
     const tokenRes = await fetch("https://github.com/login/oauth/access_token", {

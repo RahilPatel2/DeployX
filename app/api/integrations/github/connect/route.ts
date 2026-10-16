@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { createOAuthState, OAUTH_STATE_COOKIE_NAME, OAUTH_STATE_MAX_AGE } from "@/lib/auth/oauth-state";
 import { checkRateLimit } from "@/lib/auth/rate-limit";
+import { getGitHubOAuthConfig } from "@/lib/github/oauth-config";
 
 export async function GET(req: Request) {
   try {
@@ -19,19 +20,13 @@ export async function GET(req: Request) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    const clientId = process.env.GITHUB_CLIENT_ID?.trim();
-    const clientSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
+    const { clientId, clientSecret, callbackUrl, isConfigured } = getGitHubOAuthConfig(url.origin);
 
-    if (!clientId || !clientSecret) {
+    if (!isConfigured) {
       const redirectUrl = new URL(returnTo, req.url);
       redirectUrl.searchParams.set("error", "GitHub OAuth App is not configured. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.");
       return NextResponse.redirect(redirectUrl);
     }
-
-    // Determine configured callback URL
-    const callbackUrl =
-      process.env.GITHUB_CALLBACK_URL?.trim() ||
-      `${process.env.NEXT_PUBLIC_APP_URL?.trim() || url.origin}/api/integrations/github/callback`;
 
     // Request permissions: 'read:user' for profile display, 'repo' for project cloning and build detection
     const requestedScope = url.searchParams.get("scope") === "public" ? "read:user" : "read:user,repo";
