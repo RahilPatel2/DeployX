@@ -41,24 +41,13 @@ export class CloudflareTimeoutError extends Error {
   }
 }
 
+import { redactSensitiveData } from "@/lib/security/redaction";
+
 /**
  * Redacts Cloudflare API tokens or Authorization headers from any string.
  */
 export function redactSensitive(input: string, tokenToRedact?: string): string {
-  if (!input || typeof input !== "string") return input;
-  let redacted = input;
-  const token = tokenToRedact || process.env.CLOUDFLARE_API_TOKEN?.trim();
-  if (token && token.length > 5) {
-    redacted = redacted.split(token).join("[REDACTED_API_TOKEN]");
-  }
-  if (process.env.GITHUB_CLIENT_SECRET?.trim()) {
-    redacted = redacted.split(process.env.GITHUB_CLIENT_SECRET.trim()).join("[REDACTED]");
-  }
-  // Redact Bearer tokens in headers or strings
-  redacted = redacted.replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "Bearer [REDACTED]");
-  // Redact GitHub personal access and OAuth tokens (ghp_, gho_, ghu_, ghs_, ghr_)
-  redacted = redacted.replace(/gh[pousr]_[A-Za-z0-9_]{16,}/g, "[REDACTED_TOKEN]");
-  return redacted;
+  return redactSensitiveData(input, tokenToRedact ? [tokenToRedact] : undefined);
 }
 
 /**

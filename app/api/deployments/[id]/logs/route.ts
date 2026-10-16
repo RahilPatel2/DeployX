@@ -55,8 +55,8 @@ export async function GET(
       }
     }
 
-    const { redactSensitive } = await import("@/lib/cloudflare/client");
-    const sanitizedLogs = allLogs.map((l) => redactSensitive(l));
+    const { redactLogs } = await import("@/lib/security/redaction");
+    const sanitizedLogs = redactLogs(allLogs);
     const totalLines = sanitizedLogs.length;
     const paginatedLogs = sanitizedLogs.slice(offset, offset + limit);
 
