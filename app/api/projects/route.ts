@@ -46,6 +46,7 @@ export async function GET(req: Request) {
     // Fetch projects scoped strictly to the authenticated user
     const [rawProjects, total] = await Promise.all([
       Project.find(query)
+        .select("-webhookSecret")
         .sort(sortObject)
         .skip(skip)
         .limit(limit)
@@ -62,7 +63,21 @@ export async function GET(req: Request) {
           {
             $group: {
               _id: "$projectId",
-              latestDeployment: { $first: "$$ROOT" },
+              latestDeployment: {
+                $first: {
+                  _id: "$_id",
+                  status: "$status",
+                  duration: "$duration",
+                  environment: "$environment",
+                  branch: "$branch",
+                  commitHash: "$commitHash",
+                  commitMessage: "$commitMessage",
+                  url: "$url",
+                  createdAt: "$createdAt",
+                  updatedAt: "$updatedAt",
+                  errorMessage: "$errorMessage",
+                },
+              },
               readyUrls: {
                 $push: {
                   $cond: [
