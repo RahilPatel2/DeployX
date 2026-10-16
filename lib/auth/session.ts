@@ -2,15 +2,41 @@ import { SignJWT, jwtVerify, JWTPayload } from "jose";
 import { cookies } from "next/headers";
 import mongoose from "mongoose";
 
-const secretKey = process.env.JWT_SECRET || "default_development_secret_key";
-const key = new TextEncoder().encode(secretKey);
-
 export const SESSION_COOKIE_NAME = "session";
 export const SESSION_DURATION_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
+/**
+ * Checks whether the current runtime environment requires Secure cookie flags.
+ * Enforced in production or whenever the canonical app URL uses HTTPS.
+ */
+export function isProductionSecure(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim().startsWith("https://") === true
+  );
+}
+
+/**
+ * Retrieves the cryptographic key for JWT signing and verification.
+ * Enforces high-entropy secret in production to prevent signing with insecure defaults.
+ */
+export function getSessionSecretKey(): Uint8Array {
+  const secret = process.env.JWT_SECRET?.trim();
+  if (process.env.NODE_ENV === "production") {
+    if (!secret || secret === "default_development_secret_key") {
+      throw new Error(
+        "[DeployX Auth] FATAL: Insecure JWT_SECRET in production! A strong secret (min 32 characters) must be configured."
+      );
+    }
+  }
+  return new TextEncoder().encode(secret || "default_development_secret_key");
+}
+
 export const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  get secure(): boolean {
+    return isProductionSecure();
+  },
   sameSite: "lax" as const,
   path: "/",
   maxAge: SESSION_DURATION_SECONDS,
@@ -25,13 +51,13 @@ export async function encrypt(payload: JWTPayload): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(key);
+    .sign(getSessionSecretKey());
 }
 
 export async function decrypt(input: string): Promise<SessionPayload | null> {
   if (!input || typeof input !== "string") return null;
   try {
-    const { payload } = await jwtVerify(input, key, {
+    const { payload } = await jwtVerify(input, getSessionSecretKey(), {
       algorithms: ["HS256"],
       clockTolerance: 15,
     });
@@ -133,11 +159,11 @@ export async function clearSession(): Promise<void> {
 }
 
 export function getSessionCookieHeader(token: string): string {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  const secure = isProductionSecure() ? "; Secure" : "";
   return `${SESSION_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; Max-Age=${SESSION_DURATION_SECONDS}; HttpOnly; SameSite=Lax${secure}`;
 }
 
 export function getClearSessionCookieHeader(): string {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  const secure = isProductionSecure() ? "; Secure" : "";
   return `${SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax${secure}`;
 }
