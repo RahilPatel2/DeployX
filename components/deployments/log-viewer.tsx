@@ -22,8 +22,11 @@ export function LogViewer({
   const [searchTerm, setSearchTerm] = useState("");
   const [autoScroll, setAutoScroll] = useState(true);
 
+  // During active builds, poll with a windowed tail to conserve bandwidth and CPU
+  const logsUrl = `/api/deployments/${deploymentId}/logs${isBuilding ? "?tail=400" : ""}`;
+
   const { data } = useSWR(
-    `/api/deployments/${deploymentId}/logs`,
+    logsUrl,
     fetcher,
     { refreshInterval: isBuilding ? 3000 : 0 }
   );
@@ -50,7 +53,17 @@ export function LogViewer({
       return;
     }
     try {
-      await navigator.clipboard.writeText(rawLogs.join("\n"));
+      let logsToCopy = rawLogs;
+      if (data?.isTailed) {
+        const fullRes = await fetch(`/api/deployments/${deploymentId}/logs`);
+        if (fullRes.ok) {
+          const fullData = await fullRes.json();
+          if (Array.isArray(fullData.logs)) {
+            logsToCopy = fullData.logs;
+          }
+        }
+      }
+      await navigator.clipboard.writeText(logsToCopy.join("\n"));
       setCopied(true);
       toast.success("Logs copied to clipboard");
       setTimeout(() => setCopied(false), 2000);

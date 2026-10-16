@@ -29,6 +29,8 @@ export async function GET(
     }
 
     const { searchParams } = new URL(req.url);
+    const tailParam = searchParams.get("tail");
+    const tail = tailParam ? Math.min(Math.max(parseInt(tailParam, 10), 1), 2000) : null;
     const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10), 0);
     const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "1000", 10), 1), 5000);
 
@@ -36,7 +38,9 @@ export async function GET(
 
     // If local logs are empty and a Cloudflare deployment exists, attempt Cloudflare log retrieval
     if (allLogs.length === 0 && deployment.cloudflareDeploymentId) {
-      const project = await Project.findOne({ _id: deployment.projectId, userId: session.userId });
+      const project = await Project.findOne({ _id: deployment.projectId, userId: session.userId })
+        .select("cloudflareProjectName")
+        .lean();
       if (project && project.cloudflareProjectName) {
         try {
           const logsData = await CloudflareProvider.getDeploymentLogs(project.cloudflareProjectName, deployment.cloudflareDeploymentId);
@@ -58,14 +62,18 @@ export async function GET(
     const { redactLogs } = await import("@/lib/security/redaction");
     const sanitizedLogs = redactLogs(allLogs);
     const totalLines = sanitizedLogs.length;
-    const paginatedLogs = sanitizedLogs.slice(offset, offset + limit);
+
+    const paginatedLogs = tail !== null
+      ? sanitizedLogs.slice(-tail)
+      : sanitizedLogs.slice(offset, offset + limit);
 
     return NextResponse.json({
       logs: paginatedLogs,
       totalLines,
-      offset,
-      limit,
-      hasMore: offset + limit < totalLines,
+      offset: tail !== null ? Math.max(0, totalLines - tail) : offset,
+      limit: tail !== null ? tail : limit,
+      isTailed: tail !== null,
+      hasMore: tail !== null ? totalLines > tail : offset + limit < totalLines,
       emptyMessage: totalLines === 0 ? "No build logs recorded yet for this deployment." : undefined,
     });
 
