@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
+import connectToDatabase from "@/lib/mongodb/client";
 import { ANTI_CACHE_HEADERS } from "@/lib/security/headers";
 
 /**
@@ -15,6 +16,14 @@ export async function GET() {
   const environment = process.env.NODE_ENV || "development";
 
   // Check database readiness (1 = connected, 2 = connecting, 0 = disconnected)
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await connectToDatabase();
+    } catch {
+      // Graceful fallback to report degraded status without throwing unhandled exceptions
+    }
+  }
+
   let dbStatus: "connected" | "connecting" | "disconnected" = "disconnected";
   const readyState = mongoose.connection.readyState;
 
