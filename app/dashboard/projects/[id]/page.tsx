@@ -490,10 +490,11 @@ export default function ProjectPage(props: { params: Promise<{ id: string }> }) 
   const handleDeploy = async () => {
     setDeploying(true);
     try {
+      const targetProjectId = project?._id || params.id;
       const res = await fetch("/api/deployments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: params.id }),
+        body: JSON.stringify({ projectId: targetProjectId }),
       });
 
       if (!res.ok) {

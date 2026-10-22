@@ -85,10 +85,18 @@ export async function POST(
 
     // 6. Determine target commit SHA (prefer historical pinned commit for reproducibility)
     const body = await req.json().catch(() => ({}));
-    const [owner, repo] = (project.repository || "").split("/");
-    if (!owner || !repo) {
-      return NextResponse.json({ error: "Invalid repository format" }, { status: 400 });
+    const { validateRepositoryContract } = await import("@/lib/github/repository");
+    const repoValidation = validateRepositoryContract(project);
+    if (!repoValidation.valid || !repoValidation.repository) {
+      return NextResponse.json(
+        {
+          error: repoValidation.error || "Invalid repository format",
+          code: repoValidation.code || "INVALID_REPOSITORY_FORMAT",
+        },
+        { status: 400 }
+      );
     }
+    const { owner, repo } = repoValidation.repository;
 
     let targetCommitSha = historical.commitHash;
     let targetCommitMessage = historical.commitMessage || `Redeploy of #${historical._id.toString().slice(-6)}`;

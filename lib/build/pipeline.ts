@@ -240,10 +240,12 @@ export async function runBuildPipeline(
       throw new Error("GitHub integration is not connected for this account. Please connect GitHub in settings.");
     }
 
-    const [owner, repo] = project.repository.split("/");
-    if (!owner || !repo) {
-      throw new Error(`Invalid repository format '${project.repository}'. Expected 'owner/repo'.`);
+    const { extractRepositoryFromProject } = await import("@/lib/github/repository");
+    const resolvedRepo = extractRepositoryFromProject(project);
+    if (!resolvedRepo) {
+      throw new Error(`Invalid repository format '${project.repository || "undefined"}'. Expected 'owner/repo'.`);
     }
+    const { owner, repo } = resolvedRepo;
 
     await addLog(`[DeployX] Verifying repository access and pinning commit SHA on branch '${deployment.branch}'...`);
 

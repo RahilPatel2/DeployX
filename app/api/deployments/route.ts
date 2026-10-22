@@ -18,18 +18,20 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { projectId } = body;
+    const projectId = body.projectId || body.id || body.slug;
 
-    if (!projectId || !mongoose.isValidObjectId(projectId)) {
-      return NextResponse.json({ error: "Valid Project ID is required" }, { status: 400 });
+    if (!projectId || (typeof projectId === "string" && !projectId.trim())) {
+      return NextResponse.json({ error: "Valid Project ID or slug is required" }, { status: 400 });
     }
 
     await connectToDatabase();
 
     // 1. Enforce Project Ownership server-side
-    const project = await Project.findOne({ _id: projectId, userId: session.userId })
-      .select("_id framework deploymentMode rootDirectory buildCommand outputDirectory branch cloudflareProjectName")
-      .lean();
+    const projectQuery = mongoose.isValidObjectId(projectId)
+      ? { _id: projectId, userId: session.userId }
+      : { slug: projectId, userId: session.userId };
+
+    const project = await Project.findOne(projectQuery);
     if (!project) {
       return NextResponse.json({ error: "Project not found or access denied" }, { status: 404 });
     }
@@ -74,7 +76,32 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4. Validate GitHub Integration and Access
+    // 4. Validate and Normalize Repository Information
+    const { validateRepositoryContract } = await import("@/lib/github/repository");
+    const repoValidation = validateRepositoryContract(project);
+
+    if (!repoValidation.valid || !repoValidation.repository) {
+      return NextResponse.json(
+        {
+          error: repoValidation.error || `Invalid repository identifier '${project.repository}'. Expected format 'owner/repo'.`,
+          code: repoValidation.code || "INVALID_REPOSITORY_FORMAT",
+          recommendation: "Please verify repository settings or re-import the repository from GitHub.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const { owner, repo, fullName } = repoValidation.repository;
+
+    // Self-heal stored repository fields if missing or denormalized
+    if (project.repository !== fullName || !project.repositoryOwner || !project.repositoryName) {
+      project.repository = fullName;
+      project.repositoryOwner = owner;
+      project.repositoryName = repo;
+      await project.save().catch(() => {});
+    }
+
+    // 5. Validate GitHub Integration and Access
     const Integration = (await import("@/models/Integration")).default;
     const integration = await Integration.findOne({ userId: session.userId, provider: "github" });
 
@@ -123,15 +150,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ deployment }, { status: 201 });
     }
 
-    // 5. Verify Repository & Branch Access and Pin Commit SHA
-    const [owner, repo] = (project.repository || "").split("/");
-    if (!owner || !repo) {
-      return NextResponse.json(
-        { error: `Invalid repository identifier '${project.repository}'. Expected format 'owner/repo'.` },
-        { status: 400 }
-      );
-    }
-
+    // 6. Verify Repository & Branch Access and Pin Commit SHA
     let commitInfo;
     try {
       const { getBranchCommit } = await import("@/lib/github/api");
@@ -141,7 +160,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    // 6. Create Initial Deployment Record (QUEUED state, pinned commit)
+    // 7. Create Initial Deployment Record (QUEUED state, pinned commit)
     const deployment = await Deployment.create({
       projectId: project._id,
       userId: session.userId,
