@@ -285,24 +285,14 @@ async function runDeploymentContractTests() {
     console.log("\n=== ALL DEPLOYMENT CONTRACT & REPOSITORY TESTS PASSED! ===");
   } finally {
     global.fetch = originalFetch;
-    try {
-      await User.deleteMany({ _id: { $in: [userAId, userBId] } });
-      await Project.deleteMany({ userId: { $in: [userAId, userBId] } });
-      await Deployment.deleteMany({ userId: { $in: [userAId, userBId] } });
-      await Integration.deleteMany({ userId: { $in: [userAId, userBId] } });
-      await mongoose.disconnect();
-    } catch {
-      // Ignore disconnect error
-    }
+    await User.deleteMany({ _id: { $in: [userAId, userBId] } });
+    await Project.deleteMany({ userId: { $in: [userAId, userBId] } });
+    await Deployment.deleteMany({ userId: { $in: [userAId, userBId] } });
+    await Integration.deleteMany({ userId: { $in: [userAId, userBId] } });
   }
 }
 
-runDeploymentContractTests()
-  .then(() => {
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error("Deployment Contract Test Suite Failed:", err);
-    process.exit(1);
-  });
-
+runDeploymentContractTests().catch((err) => {
+  console.error("Deployment Contract Test Suite Failed:", err);
+  process.exit(1);
+});
