@@ -46,7 +46,12 @@ export async function GET(req: Request) {
         page,
         limit,
       },
-      { status: 200 }
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "private, no-cache, no-transform",
+        },
+      }
     );
   } catch (error) {
     console.error("Notifications GET error:", error);

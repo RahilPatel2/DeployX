@@ -293,15 +293,22 @@ export async function GET(req: Request) {
 
     const totalPages = Math.ceil(total / limit) || 1;
 
-    return NextResponse.json({
-      deployments,
-      total,
-      page,
-      limit,
-      totalPages,
-      hasNextPage: page < totalPages,
-      hasPrevPage: page > 1,
-    });
+    return NextResponse.json(
+      {
+        deployments,
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, no-cache, no-transform",
+        },
+      }
+    );
   } catch (error: unknown) {
     console.error("Deployments GET error:", error);
     const message = error instanceof Error ? error.message : "Internal Server Error";

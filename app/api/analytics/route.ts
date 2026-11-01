@@ -213,29 +213,36 @@ export async function GET(req: Request) {
       count: f.count,
     }));
 
-    return NextResponse.json({
-      activeProjects: projectCount,
-      totalProjects: projectCount,
-      totalDeployments,
-      successfulDeployments: readyCount,
-      failedDeployments: failedCount,
-      inProgressDeployments: inProgressCount,
-      successRate,
-      successRatePercent,
-      avgBuildTime,
-      avgDurationSeconds: avgDurationSec,
-      minDurationSeconds: minDurationSec,
-      maxDurationSeconds: maxDurationSec,
-      chartData,
-      frameworks,
-      statusBreakdown: {
-        READY: readyCount,
-        FAILED: failedCount,
-        BUILDING: buildingCount,
-        QUEUED: queuedCount,
-        CANCELED: canceledCount,
+    return NextResponse.json(
+      {
+        activeProjects: projectCount,
+        totalProjects: projectCount,
+        totalDeployments,
+        successfulDeployments: readyCount,
+        failedDeployments: failedCount,
+        inProgressDeployments: inProgressCount,
+        successRate,
+        successRatePercent,
+        avgBuildTime,
+        avgDurationSeconds: avgDurationSec,
+        minDurationSeconds: minDurationSec,
+        maxDurationSeconds: maxDurationSec,
+        chartData,
+        frameworks,
+        statusBreakdown: {
+          READY: readyCount,
+          FAILED: failedCount,
+          BUILDING: buildingCount,
+          QUEUED: queuedCount,
+          CANCELED: canceledCount,
+        },
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "private, max-age=15, stale-while-revalidate=45",
+        },
+      }
+    );
   } catch (error) {
     console.error("Analytics GET error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
