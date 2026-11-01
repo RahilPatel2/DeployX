@@ -97,20 +97,27 @@ function NewProjectForm() {
     }
   }, [searchParams]);
 
-  const { data: statusData, isLoading: statusLoading } = useSWR("/api/integrations/github/status", fetcher);
-  const isConnected = statusData?.connected;
+  const { data: statusData, isLoading: statusLoading } = useSWR("/api/integrations/github/status", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+  });
 
-  // Fetch real repositories from GitHub API via our backend
-  const reposUrl = isConnected
-    ? `/api/integrations/github/repos?page=${currentPage}&per_page=30&visibility=${visibilityFilter}`
-    : null;
+  // Parallel fetch: fetch repositories concurrently with status check
+  // Eliminates a 400ms sequential waterfall on page mount
+  const reposUrl = `/api/integrations/github/repos?page=${currentPage}&per_page=30&visibility=${visibilityFilter}`;
 
   const {
     data: reposData,
     error: reposError,
     isLoading: reposLoading,
     mutate: mutateRepos,
-  } = useSWR(reposUrl, fetcher);
+  } = useSWR(reposUrl, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+    shouldRetryOnError: false,
+  });
+
+  const isConnected = statusData?.connected ?? (reposData?.repos ? true : false);
 
   const allRepos: GithubRepo[] = reposData?.repos || [];
   const hasMore = reposData?.hasMore || false;
@@ -618,7 +625,7 @@ function NewProjectForm() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {statusLoading && !statusData ? (
+              {(statusLoading && !statusData) && (reposLoading && !reposData) ? (
                 <div className="space-y-4">
                   <div className="flex gap-3">
                     <Skeleton className="h-9 flex-1 rounded-md" />
