@@ -45,11 +45,11 @@ export function NotificationDropdown() {
   const [open, setOpen] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
 
-  const { data, mutate } = useSWR<NotificationsResponse>(
+  const { data, isLoading, mutate } = useSWR<NotificationsResponse>(
     "/api/notifications?limit=8",
     {
       revalidateOnFocus: false,
-      dedupingInterval: 15000,
+      dedupingInterval: 30000,
     }
   );
 
@@ -189,7 +189,19 @@ export function NotificationDropdown() {
 
         {/* Notifications List */}
         <div className="max-h-80 overflow-y-auto divide-y divide-border/30">
-          {notifications.length === 0 ? (
+          {isLoading && !data ? (
+            <div className="p-3 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-start gap-3 p-2">
+                  <div className="h-4 w-4 rounded-full bg-muted animate-pulse mt-0.5 shrink-0" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-3 w-3/4 bg-muted rounded animate-pulse" />
+                    <div className="h-2.5 w-1/2 bg-muted/60 rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : notifications.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground px-4">
               <Bell className="h-8 w-8 mx-auto mb-2 opacity-30 text-muted-foreground" />
               <p className="text-xs font-medium text-foreground">No notifications yet</p>
