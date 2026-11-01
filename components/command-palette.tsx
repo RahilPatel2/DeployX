@@ -252,10 +252,12 @@ export function CommandPalette() {
     // 1. Check in-memory LRU cache first for instant 0ms retrieval
     const cachedResults = SEARCH_LRU_CACHE.get(trimmed);
     if (cachedResults) {
-      setRemoteProjects(cachedResults.projects);
-      setRemoteDeployments(cachedResults.deployments);
-      setSearchingRemote(false);
-      return;
+      const cacheTimer = setTimeout(() => {
+        setRemoteProjects(cachedResults.projects);
+        setRemoteDeployments(cachedResults.deployments);
+        setSearchingRemote(false);
+      }, 0);
+      return () => clearTimeout(cacheTimer);
     }
 
     // 2. Abort previous in-flight request if user is still typing

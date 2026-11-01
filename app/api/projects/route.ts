@@ -46,7 +46,7 @@ export async function GET(req: Request) {
     // Fetch projects scoped strictly to the authenticated user with explicit lean projection
     const [rawProjects, total] = await Promise.all([
       Project.find(query)
-        .select("_id name slug framework repository branch rootDirectory productionUrl autoDeploy createdAt updatedAt")
+        .select("-webhookSecret")
         .sort(sortObject)
         .skip(skip)
         .limit(limit)
@@ -59,27 +59,24 @@ export async function GET(req: Request) {
     const latestDeploymentsAgg = projectIds.length > 0
       ? await Deployment.aggregate([
           { $match: { projectId: { $in: projectIds } } },
-          {
-            $project: {
-              projectId: 1,
-              status: 1,
-              duration: 1,
-              environment: 1,
-              branch: 1,
-              commitHash: 1,
-              commitMessage: 1,
-              url: 1,
-              createdAt: 1,
-              updatedAt: 1,
-              errorMessage: 1,
-            },
-          },
           { $sort: { createdAt: -1 } },
           {
             $group: {
               _id: "$projectId",
               latestDeployment: {
-                $first: "$$ROOT",
+                $first: {
+                  _id: "$_id",
+                  status: "$status",
+                  duration: "$duration",
+                  environment: "$environment",
+                  branch: "$branch",
+                  commitHash: "$commitHash",
+                  commitMessage: "$commitMessage",
+                  url: "$url",
+                  createdAt: "$createdAt",
+                  updatedAt: "$updatedAt",
+                  errorMessage: "$errorMessage",
+                },
               },
               readyUrls: {
                 $push: {
