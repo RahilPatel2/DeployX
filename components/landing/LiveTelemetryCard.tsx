@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { Globe, Activity, ShieldCheck, Zap, HardDrive, Wifi } from "lucide-react";
+import { Globe, HardDrive, Wifi } from "lucide-react";
 import { useSafeReducedMotion } from "./motion-utils";
 
 interface RegionMetric {

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { Globe, GitBranch, Cpu, Zap, ShieldCheck } from "lucide-react";
+import { Globe, GitBranch, Zap, ShieldCheck } from "lucide-react";
 import { useSafeReducedMotion, SPRINGS } from "./motion-utils";
 
 /**

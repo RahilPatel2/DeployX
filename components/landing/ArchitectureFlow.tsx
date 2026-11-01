@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { GitBranch, Shield, Globe, Cpu, Server, Check, ArrowRight, Zap } from "lucide-react";
+import { GitBranch, Shield, Globe, ArrowRight, Zap } from "lucide-react";
 import { useSafeReducedMotion, SPRINGS } from "./motion-utils";
 
 interface PipelineNode {

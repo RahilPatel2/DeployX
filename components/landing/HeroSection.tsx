@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion, useMotionValue, useSpring, useTransform, type Variants } from "framer-motion";
+import { motion, useMotionValue, useSpring, type Variants } from "framer-motion";
 import { buttonVariants } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Terminal, Shield, CheckCircle2, Zap } from "lucide-react";
-import { EASING, SPRINGS, useSafeReducedMotion } from "./motion-utils";
+import { ArrowRight, Sparkles, Terminal, Shield, CheckCircle2 } from "lucide-react";
+import { EASING, useSafeReducedMotion } from "./motion-utils";
 
 /**
  * Magnetic Button Component that subtly pulls toward the mouse cursor

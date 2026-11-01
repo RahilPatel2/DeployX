@@ -69,12 +69,7 @@ function AnimatedCounter({ metric }: { metric: MetricItem }) {
   );
 
   React.useEffect(() => {
-    if (reducedMotion) {
-      setDisplayValue(metric.targetValue.toLocaleString());
-      return;
-    }
-
-    if (!inView) return;
+    if (reducedMotion || !inView) return;
 
     const controls = animate(0, metric.targetValue, {
       duration: 2,

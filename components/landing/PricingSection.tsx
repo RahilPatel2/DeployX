@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { Check, Sparkles, ArrowRight, Zap, ShieldCheck, Building2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { Check, Sparkles, ArrowRight, Zap } from "lucide-react";
 import { containerStagger, FADE_UP, useSafeReducedMotion, SPRINGS } from "./motion-utils";
 
 type BillingCycle = "monthly" | "annual";

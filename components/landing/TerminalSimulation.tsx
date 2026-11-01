@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Copy, Check, Play, Pause, RotateCw, ExternalLink, ShieldCheck } from "lucide-react";
+import { motion } from "framer-motion";
+import { CheckCircle2, Copy, Check, Play, Pause, RotateCw, ExternalLink } from "lucide-react";
 import { useSafeReducedMotion } from "./motion-utils";
 
 interface LogStep {
@@ -32,12 +32,7 @@ export function TerminalSimulation({ onRestart }: { onRestart?: () => void }) {
   const [copied, setCopied] = React.useState(false);
 
   React.useEffect(() => {
-    if (reducedMotion) {
-      setVisibleCount(STEPS.length);
-      return;
-    }
-
-    if (isPaused || visibleCount >= STEPS.length) return;
+    if (reducedMotion || isPaused || visibleCount >= STEPS.length) return;
 
     const timer = setTimeout(() => {
       setVisibleCount((prev) => Math.min(prev + 1, STEPS.length));

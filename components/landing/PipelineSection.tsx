@@ -3,7 +3,7 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import { GitCommit, ShieldCheck, Cpu, Globe2, ArrowRight, Zap, Check } from "lucide-react";
-import { containerStagger, FADE_UP, useSafeReducedMotion, SPRINGS } from "./motion-utils";
+import { containerStagger, FADE_UP, useSafeReducedMotion } from "./motion-utils";
 
 interface PipelineStep {
   number: string;

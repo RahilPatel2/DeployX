@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { ShieldAlert, KeyRound, Network, History, Lock, Cpu, Globe, ArrowUpRight } from "lucide-react";
+import { KeyRound, Lock, Cpu, Globe } from "lucide-react";
 import { containerStagger, FADE_UP, useSafeReducedMotion } from "./motion-utils";
 
 interface BentoCardProps {

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Terminal, Network, Activity, ExternalLink, Play, RotateCw } from "lucide-react";
+import { Terminal, Network, Activity, RotateCw } from "lucide-react";
 import { useSafeReducedMotion, SPRINGS } from "./motion-utils";
 import { TerminalSimulation } from "./TerminalSimulation";
 import { ArchitectureFlow } from "./ArchitectureFlow";

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Shield, Globe, ExternalLink, Heart } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
 function GithubIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
