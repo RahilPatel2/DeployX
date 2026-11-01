@@ -2,14 +2,62 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion, type Variants } from "framer-motion";
+import { motion, useMotionValue, useSpring, useTransform, type Variants } from "framer-motion";
 import { buttonVariants } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Terminal, Shield, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Sparkles, Terminal, Shield, CheckCircle2, Zap } from "lucide-react";
 import { EASING, SPRINGS, useSafeReducedMotion } from "./motion-utils";
 
 /**
+ * Magnetic Button Component that subtly pulls toward the mouse cursor
+ */
+function MagneticButton({
+  children,
+  className,
+  href,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  href: string;
+}) {
+  const ref = React.useRef<HTMLAnchorElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const springX = useSpring(x, { stiffness: 250, damping: 20 });
+  const springY = useSpring(y, { stiffness: 250, damping: 20 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    x.set((e.clientX - centerX) * 0.18);
+    y.set((e.clientY - centerY) * 0.18);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return (
+    <motion.div style={{ x: springX, y: springY }} className="w-full sm:w-auto">
+      <Link
+        ref={ref}
+        href={href}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        className={className}
+      >
+        {children}
+      </Link>
+    </motion.div>
+  );
+}
+
+/**
  * Cinematic Hero Section for DeployX
- * Features staggered headline reveals, animated beacon badge, and high-impact CTAs.
+ * Features staggered headline reveals, animated beacon badge, magnetic buttons, and glowing gradients.
  */
 export function HeroSection() {
   const reducedMotion = useSafeReducedMotion();
@@ -76,7 +124,7 @@ export function HeroSection() {
           <motion.div
             variants={itemVariants}
             whileHover={{ scale: 1.04 }}
-            className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium text-foreground backdrop-blur-md shadow-xs mb-6 cursor-default group"
+            className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-4 py-1.5 text-xs font-medium text-foreground backdrop-blur-md shadow-xs mb-6 cursor-default group"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -99,7 +147,7 @@ export function HeroSection() {
                   variants={reducedMotion ? undefined : wordVariants}
                   className={`inline-block ${
                     word.edgeColor
-                      ? "bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent"
+                      ? "bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-sm"
                       : word.highlight
                       ? "text-foreground font-black"
                       : "text-muted-foreground font-bold"
@@ -121,51 +169,37 @@ export function HeroSection() {
             framework detection, sandboxed builds, credential scrubbing, and instant Cloudflare Pages distribution.
           </motion.p>
 
-          {/* CTA Buttons with Magnetic Hover Animation */}
+          {/* CTA Buttons with Magnetic Hover Animation & Gradient Aura */}
           <motion.div
             variants={itemVariants}
             className="flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full sm:w-auto"
           >
-            <motion.div
-              whileHover={{ scale: 1.04, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              transition={SPRINGS.snappy}
-              className="w-full sm:w-auto"
+            <MagneticButton
+              href="/dashboard/projects/new"
+              className={buttonVariants({
+                size: "lg",
+                className:
+                  "w-full sm:w-auto h-12 px-7 text-sm font-semibold rounded-xl shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 relative overflow-hidden group border border-primary/40",
+              })}
             >
-              <Link
-                href="/dashboard/projects/new"
-                className={buttonVariants({
-                  size: "lg",
-                  className:
-                    "w-full sm:w-auto h-12 px-7 text-sm font-semibold rounded-xl shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 relative overflow-hidden group border border-primary/40",
-                })}
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  Deploy a Project
-                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-transparent to-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </Link>
-            </motion.div>
+              <span className="relative z-10 flex items-center gap-2">
+                Deploy a Project
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/25 via-transparent to-primary/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </MagneticButton>
 
-            <motion.div
-              whileHover={{ scale: 1.03, y: -1 }}
-              whileTap={{ scale: 0.98 }}
-              transition={SPRINGS.snappy}
-              className="w-full sm:w-auto"
+            <MagneticButton
+              href="/dashboard"
+              className={buttonVariants({
+                variant: "outline",
+                size: "lg",
+                className:
+                  "w-full sm:w-auto h-12 px-7 text-sm font-medium rounded-xl border-border/80 bg-card/60 backdrop-blur-md hover:bg-muted/60 transition-all",
+              })}
             >
-              <Link
-                href="/dashboard"
-                className={buttonVariants({
-                  variant: "outline",
-                  size: "lg",
-                  className:
-                    "w-full sm:w-auto h-12 px-7 text-sm font-medium rounded-xl border-border/80 bg-card/60 backdrop-blur-md hover:bg-muted/60 transition-all",
-                })}
-              >
-                Explore Dashboard
-              </Link>
-            </motion.div>
+              Explore Dashboard
+            </MagneticButton>
           </motion.div>
 
           {/* Feature Highlights Trust Ticker */}
