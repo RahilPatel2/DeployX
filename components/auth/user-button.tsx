@@ -18,7 +18,7 @@ import useSWR, { mutate } from "swr";
 
 export function UserButton() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { data, error } = useSWR("/api/auth/profile", {
+  const { data, error, isLoading } = useSWR("/api/auth/profile", {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
     dedupingInterval: 60000,
@@ -26,7 +26,14 @@ export function UserButton() {
 
   const user = data?.user;
 
-  // If unauthenticated or profile error, do not render user button
+  // Immediate visual placeholder prevents layout shift while profile query resolves
+  if (isLoading && !user) {
+    return (
+      <div className="h-8 w-8 rounded-full bg-muted/60 animate-pulse border border-border/40 shrink-0" />
+    );
+  }
+
+  // If unauthenticated or persistent error, do not render user button
   if (error || !user) return null;
 
   const handleLogout = async () => {
@@ -81,22 +88,22 @@ export function UserButton() {
 
         {/* Core Profile & Account Navigation */}
         <DropdownMenuGroup className="space-y-0.5">
-          <DropdownMenuItem render={<Link href="/dashboard/settings/profile" className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
+          <DropdownMenuItem render={<Link href="/dashboard/settings/profile" prefetch={true} className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
             <User className="mr-2.5 h-4 w-4 text-primary" />
             <span>Edit Profile</span>
           </DropdownMenuItem>
 
-          <DropdownMenuItem render={<Link href="/dashboard/settings" className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
+          <DropdownMenuItem render={<Link href="/dashboard/settings" prefetch={true} className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
             <Settings className="mr-2.5 h-4 w-4 text-muted-foreground" />
             <span>Account Settings</span>
           </DropdownMenuItem>
 
-          <DropdownMenuItem render={<Link href="/dashboard/settings/security" className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
+          <DropdownMenuItem render={<Link href="/dashboard/settings/security" prefetch={true} className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
             <Shield className="mr-2.5 h-4 w-4 text-emerald-500" />
             <span>Security & Sessions</span>
           </DropdownMenuItem>
 
-          <DropdownMenuItem render={<Link href="/dashboard/settings/appearance" className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
+          <DropdownMenuItem render={<Link href="/dashboard/settings/appearance" prefetch={true} className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
             <Palette className="mr-2.5 h-4 w-4 text-amber-500" />
             <span>Appearance</span>
           </DropdownMenuItem>
