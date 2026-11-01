@@ -79,6 +79,22 @@ export const fadeInVariants: Variants = {
   },
 };
 
+// Aliases for clean declarative composition
+export const FADE_UP = fadeUpVariants;
+
+export function containerStagger(staggerChildren: number = 0.08, delayChildren: number = 0.1): Variants {
+  return {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren,
+        delayChildren,
+      },
+    },
+  };
+}
+
 export const slideInLeftVariants: Variants = {
   hidden: { opacity: 0, x: -32 },
   visible: {

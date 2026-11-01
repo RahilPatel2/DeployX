@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { Star, Quote, Github, Twitter, CheckCircle2 } from "lucide-react";
+import { Star, Quote, CheckCircle2 } from "lucide-react";
 import { containerStagger, FADE_UP, useSafeReducedMotion } from "./motion-utils";
 
 interface Testimonial {
