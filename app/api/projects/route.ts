@@ -43,10 +43,10 @@ export async function GET(req: Request) {
       query.framework = { $regex: `^${escapeRegex(sanitizedFramework)}$`, $options: "i" };
     }
 
-    // Fetch projects scoped strictly to the authenticated user
+    // Fetch projects scoped strictly to the authenticated user with explicit lean projection
     const [rawProjects, total] = await Promise.all([
       Project.find(query)
-        .select("-webhookSecret")
+        .select("_id name slug framework repository branch rootDirectory productionUrl autoDeploy createdAt updatedAt")
         .sort(sortObject)
         .skip(skip)
         .limit(limit)
@@ -54,29 +54,32 @@ export async function GET(req: Request) {
       Project.countDocuments(query),
     ]);
 
-    // Attach latest deployment for each project on this page
+    // Attach latest deployment for each project on this page via optimized lean aggregation
     const projectIds = rawProjects.map((p) => p._id);
     const latestDeploymentsAgg = projectIds.length > 0
       ? await Deployment.aggregate([
           { $match: { projectId: { $in: projectIds } } },
+          {
+            $project: {
+              projectId: 1,
+              status: 1,
+              duration: 1,
+              environment: 1,
+              branch: 1,
+              commitHash: 1,
+              commitMessage: 1,
+              url: 1,
+              createdAt: 1,
+              updatedAt: 1,
+              errorMessage: 1,
+            },
+          },
           { $sort: { createdAt: -1 } },
           {
             $group: {
               _id: "$projectId",
               latestDeployment: {
-                $first: {
-                  _id: "$_id",
-                  status: "$status",
-                  duration: "$duration",
-                  environment: "$environment",
-                  branch: "$branch",
-                  commitHash: "$commitHash",
-                  commitMessage: "$commitMessage",
-                  url: "$url",
-                  createdAt: "$createdAt",
-                  updatedAt: "$updatedAt",
-                  errorMessage: "$errorMessage",
-                },
+                $first: "$$ROOT",
               },
               readyUrls: {
                 $push: {
@@ -146,15 +149,22 @@ export async function GET(req: Request) {
 
     const totalPages = Math.ceil(total / limit) || 1;
 
-    return NextResponse.json({
-      projects,
-      total,
-      page,
-      limit,
-      totalPages,
-      hasNextPage: page < totalPages,
-      hasPrevPage: page > 1,
-    });
+    return NextResponse.json(
+      {
+        projects,
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+      {
+        headers: {
+          "Cache-Control": "private, no-cache, no-transform",
+        },
+      }
+    );
   } catch (error) {
     console.error("Projects GET error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
