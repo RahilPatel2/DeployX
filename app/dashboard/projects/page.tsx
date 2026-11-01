@@ -122,6 +122,31 @@ export default function ProjectsPage() {
 
   async function handleTriggerDeployment(projectId: string, projectName: string) {
     setDeployingId(projectId);
+
+    // 1. Immediate optimistic UI feedback: mark project deployment as QUEUED
+    mutate(
+      (prev) =>
+        prev
+          ? {
+              ...prev,
+              projects: prev.projects.map((p) =>
+                p._id === projectId
+                  ? {
+                      ...p,
+                      latestDeployment: {
+                        _id: "temp-queued",
+                        status: "QUEUED",
+                        commitMessage: "Triggering manual build...",
+                        createdAt: new Date().toISOString(),
+                      },
+                    }
+                  : p
+              ),
+            }
+          : prev,
+      false
+    );
+
     try {
       const res = await fetch("/api/deployments", {
         method: "POST",
@@ -136,12 +161,14 @@ export default function ProjectsPage() {
         } else {
           toast.error(resData.error || "Failed to trigger deployment.");
         }
+        await mutate(); // Revert optimistic state
       } else {
         toast.success(`Deployment queued for ${projectName}`);
-        mutate();
+        await mutate(); // Revalidate with real server data
       }
     } catch {
       toast.error("Network error while triggering deployment.");
+      await mutate(); // Revert optimistic state
     } finally {
       setDeployingId(null);
     }
