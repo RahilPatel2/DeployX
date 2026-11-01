@@ -90,6 +90,9 @@ const DeploymentSchema: Schema = new Schema(
 // Indexes
 DeploymentSchema.index({ userId: 1, createdAt: -1 });
 DeploymentSchema.index({ userId: 1, status: 1 });
+DeploymentSchema.index({ userId: 1, status: 1, createdAt: -1 });
+DeploymentSchema.index({ userId: 1, branch: 1, createdAt: -1 });
+DeploymentSchema.index({ userId: 1, commitHash: 1 });
 DeploymentSchema.index({ projectId: 1, createdAt: -1 });
 DeploymentSchema.index({ projectId: 1, status: 1, createdAt: -1 });
 DeploymentSchema.index({ cloudflareDeploymentId: 1 }, { unique: true, sparse: true });

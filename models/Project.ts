@@ -73,6 +73,8 @@ const ProjectSchema: Schema = new Schema(
 
 // Indexes
 ProjectSchema.index({ userId: 1, createdAt: -1 });
+ProjectSchema.index({ userId: 1, updatedAt: -1 });
+ProjectSchema.index({ userId: 1, name: 1 });
 ProjectSchema.index({ userId: 1, framework: 1, createdAt: -1 });
 ProjectSchema.index({ userId: 1, slug: 1 });
 ProjectSchema.index({ userId: 1, repository: 1 });
