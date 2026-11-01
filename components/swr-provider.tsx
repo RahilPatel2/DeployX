@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { SWRConfig } from "swr";
+import { SWRConfig, preload } from "swr";
 
-const defaultFetcher = async (url: string) => {
-  const res = await fetch(url);
+export const defaultFetcher = async (url: string) => {
+  const res = await fetch(url, {
+    headers: { Accept: "application/json" },
+  });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     const error = new Error(errorData.error || `HTTP ${res.status}: Failed to fetch data`);
@@ -14,19 +16,34 @@ const defaultFetcher = async (url: string) => {
   return res.json();
 };
 
+/**
+ * Preload route data into SWR in-memory cache ahead of navigation.
+ * Called on hover or focus of navigation elements for instant rendering.
+ */
+export function preloadRouteData(key: string) {
+  if (typeof window === "undefined" || !key) return;
+  try {
+    preload(key, defaultFetcher);
+  } catch {
+    // Graceful fallback: do nothing if preloading fails
+  }
+}
+
 export function SWRDashboardProvider({ children }: { children: React.ReactNode }) {
   return (
     <SWRConfig
       value={{
         fetcher: defaultFetcher,
-        // Deduplicate requests for the same URL within a 30-second window
+        // Deduplicate identical in-flight requests within a 30-second window
         dedupingInterval: 30000,
         // Do not auto-revalidate when tab gains focus to prevent redundant API calls
         revalidateOnFocus: false,
         // Revalidate on network reconnect
         revalidateOnReconnect: true,
-        // Keep prior rendered data during background revalidations to prevent layout flashes
+        // Keep prior rendered data during background revalidations to eliminate layout flashes
         keepPreviousData: true,
+        // Throttle focus revalidations
+        focusThrottleInterval: 60000,
         // Exponential backoff for network errors, but stop on auth failures
         onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
           if (error?.status === 401 || error?.status === 403 || error?.status === 404) return;

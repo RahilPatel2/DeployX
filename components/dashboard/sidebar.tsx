@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useSidebar } from "@/components/dashboard/sidebar-context";
+import { preloadRouteData } from "@/components/swr-provider";
 
 interface RouteItem {
   label: string;
@@ -132,11 +133,25 @@ function NavContent({ pathname, isCollapsed = false, onNavigate, onToggleCollaps
               {routeGroup.items.map((route) => {
                 const isActive = isRouteActive(pathname, route.href);
 
+                const handlePrefetch = () => {
+                  if (route.href === "/dashboard/projects") {
+                    preloadRouteData("/api/projects?limit=12&sort=createdAt&order=desc&page=1");
+                  } else if (route.href === "/dashboard/deployments") {
+                    preloadRouteData("/api/deployments");
+                  } else if (route.href === "/dashboard/analytics") {
+                    preloadRouteData("/api/analytics?range=7d");
+                  } else if (route.href === "/dashboard/notifications") {
+                    preloadRouteData("/api/notifications?limit=8");
+                  }
+                };
+
                 return (
                   <Link
                     key={route.href}
                     href={route.href}
+                    prefetch={true}
                     onClick={onNavigate}
+                    onMouseEnter={handlePrefetch}
                     aria-current={isActive ? "page" : undefined}
                     title={isCollapsed ? route.label : undefined}
                     className={cn(
