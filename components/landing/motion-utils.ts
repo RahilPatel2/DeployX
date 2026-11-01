@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useReducedMotion, type Variants } from "framer-motion";
 
 /**
@@ -167,12 +168,20 @@ export const iconHoverVariants: Variants = {
   },
 };
 
+const emptySubscribe = () => () => {};
+
 /**
- * Hook to safely respect prefers-reduced-motion
+ * Hook to safely respect prefers-reduced-motion without hydration mismatch
  */
 export function useSafeReducedMotion(): boolean {
   const prefersReduced = useReducedMotion();
-  return Boolean(prefersReduced);
+  const isClient = React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+
+  return isClient ? Boolean(prefersReduced) : false;
 }
 
 /**
