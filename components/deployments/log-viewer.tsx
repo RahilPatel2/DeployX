@@ -28,18 +28,24 @@ export function LogViewer({
   const { data } = useSWR(
     logsUrl,
     fetcher,
-    { refreshInterval: isBuilding ? 3000 : 0 }
+    {
+      refreshInterval: isBuilding ? 3000 : 0,
+      revalidateOnFocus: false,
+      dedupingInterval: 2500,
+    }
   );
 
   const rawLogs: string[] = useMemo(() => data?.logs || [], [data?.logs]);
 
-  const filteredLogs = searchTerm.trim()
-    ? rawLogs
-        .map((line, index) => ({ line, originalIndex: index }))
-        .filter((item) =>
-          item.line.toLowerCase().includes(searchTerm.toLowerCase().trim())
-        )
-    : rawLogs.map((line, index) => ({ line, originalIndex: index }));
+  const filteredLogs = useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) {
+      return rawLogs.map((line, index) => ({ line, originalIndex: index }));
+    }
+    return rawLogs
+      .map((line, index) => ({ line, originalIndex: index }))
+      .filter((item) => item.line.toLowerCase().includes(term));
+  }, [rawLogs, searchTerm]);
 
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
