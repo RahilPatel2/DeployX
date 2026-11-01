@@ -19,14 +19,12 @@ import {
   Zap,
   RefreshCw,
   FolderKanban,
-  Loader2,
 } from "lucide-react";
 import useSWR from "swr";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { LucideIcon } from "lucide-react";
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface PopulatedProject {
   _id: string;
@@ -85,9 +83,7 @@ export default function ActivityPage() {
   if (category !== "all") queryParams.set("category", category);
 
   const url = `/api/activity?${queryParams.toString()}`;
-  const { data, isLoading, mutate } = useSWR<ActivityApiResponse>(url, fetcher, {
-    keepPreviousData: true,
-  });
+  const { data, isLoading, mutate } = useSWR<ActivityApiResponse>(url);
 
   const activities = data?.activities || [];
   const total = data?.total || 0;
@@ -153,9 +149,19 @@ export default function ActivityPage() {
         </CardHeader>
         <CardContent>
           {isLoading && activities.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <Loader2 className="h-6 w-6 animate-spin mb-3 opacity-60" />
-              <p className="text-sm">Loading activity feed...</p>
+            <div className="space-y-6 py-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex gap-4 items-start">
+                  <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="h-3 w-3/4" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : activities.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">

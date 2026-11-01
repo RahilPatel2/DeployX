@@ -47,8 +47,12 @@ function getEnvironmentSecrets(): string[] {
     process.env.JWT_SECRET,
     process.env.CLOUDFLARE_API_TOKEN,
     process.env.GITHUB_CLIENT_SECRET,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.MFA_ENCRYPTION_KEY,
     process.env.MONGODB_URI,
     process.env.ENCRYPTION_KEY,
+    process.env.SESSION_SECRET,
+    process.env.COOKIE_SECRET,
   ];
 
   return envSecrets

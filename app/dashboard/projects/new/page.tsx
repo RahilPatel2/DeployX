@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Search,
@@ -220,7 +221,7 @@ function NewProjectForm() {
   };
 
   const handleConnect = () => {
-    window.location.assign("/api/integrations/github/connect?returnTo=/dashboard/projects/new");
+    window.location.href = new URL("/api/integrations/github/connect?returnTo=/dashboard/projects/new", window.location.origin).toString();
   };
 
   // STEP 2: Configure & Select Branch
@@ -287,8 +288,9 @@ function NewProjectForm() {
                   </div>
 
                   {branchesLoading ? (
-                    <div className="h-10 flex items-center border border-border/50 rounded-md px-3 text-muted-foreground text-sm">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Fetching branches from GitHub...
+                    <div className="h-10 flex items-center border border-border/50 rounded-md px-3 bg-muted/20 gap-2">
+                      <Skeleton className="h-4 w-32" />
+                      <span className="text-xs text-muted-foreground ml-auto">Loading branches...</span>
                     </div>
                   ) : branchesError ? (
                     <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm flex items-center gap-2">
@@ -616,9 +618,26 @@ function NewProjectForm() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {statusLoading ? (
-                <div className="flex justify-center p-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              {statusLoading && !statusData ? (
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <Skeleton className="h-9 flex-1 rounded-md" />
+                    <Skeleton className="h-9 w-32 rounded-md" />
+                  </div>
+                  <div className="rounded-lg border border-border/50 divide-y divide-border/40">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex items-center justify-between p-4 gap-4">
+                        <div className="flex items-start space-x-3.5 flex-1">
+                          <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                          <div className="space-y-2 flex-1">
+                            <Skeleton className="h-4 w-36" />
+                            <Skeleton className="h-3 w-1/2" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-8 w-16 rounded-md shrink-0" />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : !isConnected ? (
                 <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-border/50 rounded-xl space-y-4 text-center">
@@ -669,10 +688,28 @@ function NewProjectForm() {
 
                   {/* Repositories List */}
                   <div className="rounded-lg border border-border/50 bg-muted/10 max-h-[520px] overflow-y-auto divide-y divide-border/40">
-                    {reposLoading ? (
-                      <div className="flex flex-col items-center justify-center p-12 space-y-2 text-muted-foreground text-sm">
-                        <Loader2 className="h-6 w-6 animate-spin" />
-                        <span>Loading repositories from GitHub...</span>
+                    {reposLoading && allRepos.length === 0 ? (
+                      <div className="divide-y divide-border/40">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div key={i} className="flex items-center justify-between p-4 gap-4">
+                            <div className="flex items-start space-x-3.5 min-w-0 flex-1">
+                              <Skeleton className="h-9 w-9 rounded-full shrink-0 mt-0.5" />
+                              <div className="min-w-0 space-y-2 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <Skeleton className="h-4 w-40" />
+                                  <Skeleton className="h-4 w-14 rounded-full" />
+                                </div>
+                                <Skeleton className="h-3 w-3/4" />
+                                <div className="flex items-center space-x-4">
+                                  <Skeleton className="h-3 w-16" />
+                                  <Skeleton className="h-3 w-16" />
+                                  <Skeleton className="h-3 w-20" />
+                                </div>
+                              </div>
+                            </div>
+                            <Skeleton className="h-8 w-16 rounded-md shrink-0" />
+                          </div>
+                        ))}
                       </div>
                     ) : reposError ? (
                       <div className="p-8 text-center text-destructive flex flex-col items-center space-y-3">

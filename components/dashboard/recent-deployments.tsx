@@ -5,13 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { buttonVariants } from "@/components/ui/button";
-import { GitFork, Loader2, FolderKanban } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { FolderKanban, GitBranch } from "lucide-react";
 import Link from "next/link";
 import useSWR from "swr";
 import { formatDistanceToNow } from "date-fns";
-import { motion } from "framer-motion";
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Deployment {
   _id: string;
@@ -24,7 +22,6 @@ interface Deployment {
   trigger?: "manual" | "redeploy" | "webhook";
   createdAt: string;
   duration?: number;
-  // populated field if possible, else just use projectId
   projectName?: string; 
 }
 
@@ -44,21 +41,18 @@ export function RecentDeploymentsTable({
 
   const qs = queryParams.toString();
   const url = `/api/deployments${qs ? `?${qs}` : ""}`;
-  const { data, isLoading } = useSWR<{ deployments: Deployment[] }>(url, fetcher, { refreshInterval: 5000 });
+  const { data, isLoading } = useSWR<{ deployments: Deployment[] }>(url, {
+    refreshInterval: 5000,
+  });
 
   const deployments = data?.deployments || [];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
-      <Card className="bg-card/50 backdrop-blur border-border/50 shadow-sm col-span-full lg:col-span-4">
+    <Card className="bg-card/50 backdrop-blur border-border/50 shadow-sm col-span-full lg:col-span-4">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="space-y-1">
-          <CardTitle>Recent Deployments</CardTitle>
-          <CardDescription>Latest builds for your {projectId ? 'project' : 'projects'}.</CardDescription>
+          <CardTitle className="text-base sm:text-lg">Recent Deployments</CardTitle>
+          <CardDescription className="text-xs">Latest builds for your {projectId ? 'project' : 'projects'}.</CardDescription>
         </div>
         {!projectId && (
           <Link href="/dashboard/deployments" className={buttonVariants({ variant: "outline", size: "sm" })}>
@@ -66,100 +60,93 @@ export function RecentDeploymentsTable({
           </Link>
         )}
       </CardHeader>
-      <CardContent className="p-0 mt-4">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Loader2 className="h-6 w-6 animate-spin mb-4 opacity-50" />
-            <p className="text-sm">Loading deployments...</p>
+      <CardContent className="p-0 mt-3">
+        {isLoading && !data ? (
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between px-4 py-3 rounded-lg border border-border/30 bg-muted/10">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-7 w-7 rounded-full" />
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-40" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-4 w-14" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : deployments.length === 0 ? (
-           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <FolderKanban className="h-8 w-8 mb-4 opacity-30" />
-            <p className="text-sm">No deployments found.</p>
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <FolderKanban className="h-8 w-8 mb-3 opacity-30" />
+            <p className="text-sm font-medium">No deployments found</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Deploy a project to see real build telemetry here.</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead className="pl-6">Deployment</TableHead>
-                <TableHead>Environment</TableHead>
-                <TableHead>Commit</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right pr-6">Time</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {deployments.map((dep) => (
-                <TableRow key={dep._id} className="group cursor-pointer">
-                  <TableCell className="pl-6 font-medium">
-                    <Link href={`/dashboard/deployments/${dep._id}`} className="hover:underline flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-[10px] uppercase font-bold text-primary">DP</span>
-                      </div>
-                      <div className="flex flex-col">
-                         <span>{dep._id.substring(dep._id.length - 7)}</span>
-                      </div>
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">{dep.environment}</span>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <GitBranch className="h-3 w-3" />
-                        {dep.branch}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-1.5 max-w-[240px]">
-                        <span className="text-sm truncate">{dep.commitMessage || 'Manual Deploy'}</span>
-                        {dep.trigger === 'webhook' && (
-                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 border-purple-500/30 text-purple-400 bg-purple-500/10 shrink-0">
-                            Push
-                          </Badge>
-                        )}
-                        {dep.trigger === 'redeploy' && (
-                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 border-amber-500/30 text-amber-400 bg-amber-500/10 shrink-0">
-                            Redeploy
-                          </Badge>
-                        )}
-                      </div>
-                      {dep.commitHash && (
-                        <span className="text-xs text-muted-foreground font-mono flex items-center gap-1 mt-0.5">
-                          <GitFork className="h-3 w-3" />
-                          {dep.commitHash.substring(0, 7)}
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={dep.status} size="sm" />
-                  </TableCell>
-                  <TableCell className="text-right pr-6 text-muted-foreground text-sm">
-                    <div className="flex flex-col items-end">
-                      <span>{formatDistanceToNow(new Date(dep.createdAt))} ago</span>
-                      <span className="text-xs">{dep.duration ? `${dep.duration}s` : '-'}</span>
-                    </div>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/40 text-xs">
+                <TableRow>
+                  <TableHead className="pl-6">Deployment</TableHead>
+                  <TableHead>Environment</TableHead>
+                  <TableHead>Commit</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right pr-6">Time</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody className="text-xs">
+                {deployments.map((dep) => (
+                  <TableRow key={dep._id} className="group hover:bg-muted/40 transition-colors">
+                    <TableCell className="pl-6 font-medium">
+                      <Link href={`/dashboard/deployments/${dep._id}`} className="hover:underline flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-[10px] uppercase font-bold text-primary">DP</span>
+                        </div>
+                        <span className="font-mono">{dep._id.substring(dep._id.length - 7)}</span>
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span>{dep.environment}</span>
+                        <span className="text-muted-foreground flex items-center gap-1 font-mono text-[11px]">
+                          <GitBranch className="h-3 w-3" />
+                          {dep.branch}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col max-w-[240px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate">{dep.commitMessage || 'Manual Deploy'}</span>
+                          {dep.trigger === 'webhook' && (
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 border-purple-500/30 text-purple-400 bg-purple-500/10 shrink-0">
+                              Push
+                            </Badge>
+                          )}
+                        </div>
+                        {dep.commitHash && (
+                          <span className="font-mono text-[10px] text-muted-foreground">
+                            {dep.commitHash.substring(0, 7)}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={dep.status} />
+                    </TableCell>
+                    <TableCell className="text-right pr-6 text-muted-foreground whitespace-nowrap">
+                      {formatDistanceToNow(new Date(dep.createdAt), { addSuffix: true })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>
-    </motion.div>
-  );
-}
-
-function GitBranch({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <line x1="6" x2="6" y1="3" y2="15" />
-      <circle cx="18" cy="6" r="3" />
-      <circle cx="6" cy="18" r="3" />
-      <path d="M18 9a9 9 0 0 1-9 9" />
-    </svg>
   );
 }

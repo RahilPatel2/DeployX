@@ -1,12 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
+export type NotificationCategory = 'deployment' | 'security' | 'system' | 'project';
 
 export interface INotification extends Document {
   userId: mongoose.Types.ObjectId;
   title: string;
   message: string;
   type: NotificationType;
+  category?: NotificationCategory;
   read: boolean;
   link?: string;
   createdAt: Date;
@@ -23,6 +25,11 @@ const NotificationSchema: Schema = new Schema(
       enum: ['info', 'success', 'warning', 'error'], 
       default: 'info' 
     },
+    category: {
+      type: String,
+      enum: ['deployment', 'security', 'system', 'project'],
+      default: 'system',
+    },
     read: { type: Boolean, default: false },
     link: { type: String },
   },
@@ -31,8 +38,9 @@ const NotificationSchema: Schema = new Schema(
   }
 );
 
-// Indexes
+// Compound Indexes for fast, scalable queries
 NotificationSchema.index({ userId: 1, createdAt: -1 });
 NotificationSchema.index({ userId: 1, read: 1 });
+NotificationSchema.index({ userId: 1, category: 1 });
 
 export default mongoose.models.Notification || mongoose.model<INotification>('Notification', NotificationSchema);

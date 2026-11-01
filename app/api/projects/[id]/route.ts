@@ -93,7 +93,7 @@ export async function DELETE(
       // Ignore if Domain model not available
     }
 
-    // Log activity
+    // Log activity & Real Notification
     const Activity = (await import("@/models/Activity")).default;
     await Activity.create({
       userId: session.userId,
@@ -103,6 +103,20 @@ export async function DELETE(
       icon: "Trash",
       color: "text-red-500",
     });
+
+    try {
+      const Notification = (await import("@/models/Notification")).default;
+      await Notification.create({
+        userId: session.userId,
+        title: "Project deleted",
+        message: `Project '${project.name}' and all associated resources were deleted.`,
+        type: "warning",
+        category: "project",
+        link: "/dashboard/projects",
+      });
+    } catch {
+      // Non-fatal
+    }
 
     return NextResponse.json({ message: "Project deleted successfully" });
   } catch (error) {

@@ -20,7 +20,7 @@ export async function GET(req: Request) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    const { clientId, clientSecret, callbackUrl, isConfigured } = getGitHubOAuthConfig(url.origin);
+    const { clientId, callbackUrl, isConfigured } = getGitHubOAuthConfig(url.origin);
 
     if (!isConfigured) {
       const redirectUrl = new URL(returnTo, req.url);

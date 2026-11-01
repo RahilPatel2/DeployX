@@ -364,7 +364,7 @@ export async function POST(req: Request) {
       productionUrl: undefined,
     });
 
-    // 7. Record activity audit log
+    // 7. Record activity audit log & Real Notification
     const Activity = (await import("@/models/Activity")).default;
     await Activity.create({
       userId: session.userId,
@@ -375,6 +375,20 @@ export async function POST(req: Request) {
       icon: "Box",
       color: "text-blue-500",
     });
+
+    try {
+      const Notification = (await import("@/models/Notification")).default;
+      await Notification.create({
+        userId: session.userId,
+        title: "Project created",
+        message: `Project '${project.name}' created and linked to '${repoData.full_name}'.`,
+        type: "success",
+        category: "project",
+        link: `/dashboard/projects/${project._id}`,
+      });
+    } catch {
+      // Non-fatal
+    }
 
     return NextResponse.json({ project }, { status: 201 });
   } catch (error) {

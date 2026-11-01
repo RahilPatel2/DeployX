@@ -7,6 +7,7 @@ export { default as Notification } from "./Notification";
 export { default as Domain } from "./Domain";
 export { default as UserSettings } from "./UserSettings";
 export { default as WebhookDelivery } from "./WebhookDelivery";
+export { default as AuthChallenge } from "./AuthChallenge";
 
 export type { IUser } from "./User";
 export type { IProject } from "./Project";

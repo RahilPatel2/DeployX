@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import connectToDatabase from "@/lib/mongodb/client";
 import User from "@/models/User";
+import AuthChallenge from "@/models/AuthChallenge";
 import { createSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from "@/lib/auth/session";
 import { checkRateLimit, resetRateLimit, getClientIp, getRateLimitHeaders } from "@/lib/auth/rate-limit";
 import * as z from "zod";
@@ -119,12 +121,55 @@ export async function POST(req: Request) {
     resetRateLimit(accountRateLimitKey);
     resetRateLimit(`login:ip:${clientIp}`);
 
-    // Update lastLogin timestamp
+    // If Two-Factor Authentication is enabled, issue restricted challenge instead of session
+    if (user.mfaEnabled) {
+      const challengeToken = crypto.randomBytes(32).toString("hex");
+      await AuthChallenge.create({
+        challengeToken,
+        userId: user._id,
+        type: "mfa_login",
+        provider: "credentials",
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+        rememberMe: Boolean(parsedData.data.remember),
+        returnTo: "/dashboard",
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          mfaRequired: true,
+          challengeToken,
+          message: "Two-Factor Authentication required. Please enter your authenticator code.",
+        },
+        { status: 200 }
+      );
+    }
+
+    // Generate active session record
+    const sessionId = crypto.randomUUID();
+    const userAgent = req.headers.get("user-agent") || "Web Browser";
+
+    // Update lastLogin timestamp and session record
     user.lastLogin = new Date();
+    if (!user.sessions) user.sessions = [];
+    user.sessions.push({
+      sessionId,
+      userAgent,
+      ip: clientIp,
+      createdAt: new Date(),
+      lastActive: new Date(),
+    });
+    // Retain up to 10 latest active sessions
+    if (user.sessions.length > 10) {
+      user.sessions = user.sessions.slice(-10);
+    }
     await user.save();
 
     // Issue fresh session
-    const sessionToken = await createSession(user._id.toString());
+    const sessionToken = await createSession(user._id.toString(), {
+      sessionId,
+      tokenVersion: user.tokenVersion || 0,
+    });
 
     const response = NextResponse.json(
       {

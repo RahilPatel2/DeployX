@@ -21,7 +21,6 @@ import {
   Trash2,
   Settings,
   Clock,
-  CheckCircle2,
   AlertCircle,
   Loader2,
   RefreshCw,
@@ -53,8 +52,6 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Project {
   _id: string;
@@ -117,9 +114,7 @@ export default function ProjectsPage() {
   queryParams.set("limit", "12");
 
   const url = `/api/projects?${queryParams.toString()}`;
-  const { data, error, isLoading, mutate } = useSWR<ProjectsApiResponse>(url, fetcher, {
-    keepPreviousData: true,
-  });
+  const { data, error, isLoading, mutate } = useSWR<ProjectsApiResponse>(url);
 
   const projects = data?.projects || [];
   const total = data?.total || 0;

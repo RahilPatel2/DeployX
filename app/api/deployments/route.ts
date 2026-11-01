@@ -183,7 +183,7 @@ export async function POST(req: Request) {
       ],
     });
 
-    // 7. Record Activity Audit Log
+    // 7. Record Activity Audit Log & Real Notification
     const Activity = (await import("@/models/Activity")).default;
     await Activity.create({
       userId: session.userId,
@@ -194,6 +194,20 @@ export async function POST(req: Request) {
       icon: "Activity",
       color: "text-blue-500",
     });
+
+    try {
+      const Notification = (await import("@/models/Notification")).default;
+      await Notification.create({
+        userId: session.userId,
+        title: "Deployment started",
+        message: `Deployment #${deployment._id.toString().slice(-6)} started for '${project.name}' on branch '${project.branch}'.`,
+        type: "info",
+        category: "deployment",
+        link: `/dashboard/deployments/${deployment._id}`,
+      });
+    } catch {
+      // Non-fatal
+    }
 
     // 8. Launch Build & Deployment Pipeline Asynchronously
     const { runBuildPipeline } = await import("@/lib/build/pipeline");

@@ -13,20 +13,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, CreditCard, LogOut, Code, Loader2 } from "lucide-react";
+import { User, Settings, Shield, Palette, LogOut, Loader2 } from "lucide-react";
 import useSWR, { mutate } from "swr";
-
-const fetcher = async (url: string) => {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error("Failed to fetch user");
-  }
-  return res.json();
-};
 
 export function UserButton() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { data, error } = useSWR("/api/auth/profile", fetcher, {
+  const { data, error } = useSWR("/api/auth/profile", {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
     dedupingInterval: 60000,
@@ -55,52 +47,75 @@ export function UserButton() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="ghost" className="relative h-8 w-8 rounded-full" />}>
-        <Avatar className="h-8 w-8 border border-border/50 transition-opacity hover:opacity-80">
+      <DropdownMenuTrigger render={<Button variant="ghost" className="relative h-8 w-8 rounded-full p-0 overflow-hidden ring-1 ring-border/50 hover:ring-primary/40 transition-all active:scale-95" />}>
+        <Avatar className="h-8 w-8 transition-opacity hover:opacity-90">
           <AvatarImage src={user.avatar || ""} alt={displayName} />
-          <AvatarFallback className="bg-primary/10 text-primary font-medium">{initial}</AvatarFallback>
+          <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">{initial}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end">
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{displayName}</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {user.email || `${user.username}@example.com`}
-            </p>
+      <DropdownMenuContent className="w-64 p-1.5 shadow-xl border-border/60 bg-popover/95 backdrop-blur-md" align="end">
+        {/* Profile Info Header */}
+        <DropdownMenuLabel className="font-normal px-2 py-2">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-9 w-9 border border-border/50 shrink-0">
+              <AvatarImage src={user.avatar || ""} alt={displayName} />
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                {initial}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col min-w-0 space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-semibold leading-none truncate text-foreground">{displayName}</p>
+                <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[9px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  Active
+                </span>
+              </div>
+              <p className="text-xs leading-none text-muted-foreground truncate">
+                {user.email || `@${user.username}`}
+              </p>
+            </div>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem render={<Link href="/dashboard/settings/profile" className="w-full cursor-pointer flex items-center" />}>
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
+
+        <DropdownMenuSeparator className="my-1 border-border/40" />
+
+        {/* Core Profile & Account Navigation */}
+        <DropdownMenuGroup className="space-y-0.5">
+          <DropdownMenuItem render={<Link href="/dashboard/settings/profile" className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
+            <User className="mr-2.5 h-4 w-4 text-primary" />
+            <span>Edit Profile</span>
           </DropdownMenuItem>
-          <DropdownMenuItem render={<Link href="/dashboard/settings" className="w-full cursor-pointer flex items-center" />}>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
+
+          <DropdownMenuItem render={<Link href="/dashboard/settings" className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
+            <Settings className="mr-2.5 h-4 w-4 text-muted-foreground" />
+            <span>Account Settings</span>
           </DropdownMenuItem>
-          <DropdownMenuItem render={<Link href="/dashboard/settings/billing" className="w-full cursor-pointer flex items-center" />}>
-            <CreditCard className="mr-2 h-4 w-4" />
-            <span>Billing</span>
+
+          <DropdownMenuItem render={<Link href="/dashboard/settings/security" className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
+            <Shield className="mr-2.5 h-4 w-4 text-emerald-500" />
+            <span>Security & Sessions</span>
           </DropdownMenuItem>
-          <DropdownMenuItem render={<Link href="/dashboard/settings/api" className="w-full cursor-pointer flex items-center" />}>
-            <Code className="mr-2 h-4 w-4" />
-            <span>API Keys</span>
+
+          <DropdownMenuItem render={<Link href="/dashboard/settings/appearance" className="w-full cursor-pointer flex items-center px-2 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted/60 transition-colors" />}>
+            <Palette className="mr-2.5 h-4 w-4 text-amber-500" />
+            <span>Appearance</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
+
+        <DropdownMenuSeparator className="my-1 border-border/40" />
+
+        {/* Sign Out Action */}
         <DropdownMenuItem
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+          className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 px-2 py-1.5 rounded-md text-xs font-medium"
         >
           {isLoggingOut ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin text-destructive" />
+            <Loader2 className="mr-2.5 h-4 w-4 animate-spin text-destructive" />
           ) : (
-            <LogOut className="mr-2 h-4 w-4" />
+            <LogOut className="mr-2.5 h-4 w-4 text-destructive" />
           )}
-          <span>{isLoggingOut ? "Logging out..." : "Log out"}</span>
+          <span>{isLoggingOut ? "Signing out..." : "Sign Out"}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

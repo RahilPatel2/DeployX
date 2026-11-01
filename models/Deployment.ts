@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export type DeploymentStatus = 'QUEUED' | 'BUILDING' | 'READY' | 'FAILED' | 'CANCELED';
+export type DeploymentStage = 'queued' | 'cloning' | 'installing' | 'building' | 'uploading' | 'deployed' | 'failed';
 
 export interface BuildConfigSnapshot {
   buildCommand?: string;
@@ -15,6 +16,7 @@ export interface IDeployment extends Document {
   userId: mongoose.Types.ObjectId;
   cloudflareDeploymentId?: string;
   status: DeploymentStatus;
+  stage?: DeploymentStage;
   branch: string;
   commitHash?: string;
   commitMessage?: string;
@@ -54,6 +56,11 @@ const DeploymentSchema: Schema = new Schema(
       type: String, 
       enum: ['QUEUED', 'BUILDING', 'READY', 'FAILED', 'CANCELED'], 
       default: 'QUEUED' 
+    },
+    stage: {
+      type: String,
+      enum: ['queued', 'cloning', 'installing', 'building', 'uploading', 'deployed', 'failed'],
+      default: 'queued',
     },
     branch: { type: String, required: true, default: 'main' },
     commitHash: { type: String },

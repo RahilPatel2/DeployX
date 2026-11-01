@@ -228,9 +228,17 @@ export async function downloadRepositoryArchive(
     // Fallback: If tar extraction fails, shallow clone using memory-only extraheader
     try {
       const gitUrl = `https://github.com/${owner}/${repo}.git`;
-      await execAsync(
-        `git -c http.extraheader="Authorization: Bearer ${token}" clone --depth 1 --branch "${ref}" "${gitUrl}" "${targetDirectory}"`
-      );
+      const isSha = /^[a-f0-9]{40}$/i.test(ref);
+      if (isSha) {
+        await execAsync(`git init "${targetDirectory}"`);
+        await execAsync(`git -c http.extraheader="Authorization: Bearer ${token}" remote add origin "${gitUrl}"`, { cwd: targetDirectory });
+        await execAsync(`git -c http.extraheader="Authorization: Bearer ${token}" fetch --depth 1 origin "${ref}"`, { cwd: targetDirectory });
+        await execAsync(`git checkout FETCH_HEAD`, { cwd: targetDirectory });
+      } else {
+        await execAsync(
+          `git -c http.extraheader="Authorization: Bearer ${token}" clone --depth 1 --branch "${ref}" "${gitUrl}" "${targetDirectory}"`
+        );
+      }
       // Clean .git folder immediately to prevent secret exposure
       const gitDir = path.join(targetDirectory, ".git");
       if (fs.existsSync(gitDir)) {

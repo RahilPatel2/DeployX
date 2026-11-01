@@ -11,16 +11,15 @@
  */
 
 import assert from "assert";
+import mongoose from "mongoose";
 import { validateProductionEnv } from "../lib/env";
 import { getCanonicalAppUrl, isHttpsRequest } from "../lib/network/canonical";
 import {
   SESSION_COOKIE_OPTIONS,
-  isProductionSecure,
   getSessionSecretKey,
 } from "../lib/auth/session";
 import {
   getGitHubCallbackUrl,
-  getGitHubOAuthConfig,
   isSafeOAuthRedirect,
 } from "../lib/github/oauth-config";
 import { getCloudflareConfig } from "../lib/cloudflare/client";
@@ -167,7 +166,14 @@ async function runProductionReadinessTests() {
   console.log("\n=== ALL PRODUCTION READINESS & CONFIGURATION TESTS PASSED! ===");
 }
 
-runProductionReadinessTests().catch((err) => {
-  console.error("Production Readiness Test Suite Failed:", err);
-  process.exit(1);
-});
+runProductionReadinessTests()
+  .then(async () => {
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
+    }
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("Production Readiness Test Suite Failed:", err);
+    process.exit(1);
+  });

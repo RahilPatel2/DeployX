@@ -9,9 +9,11 @@ export async function redeployAction() {
 }
 
 export async function addEnvironmentVariable(projectId: string, formData: FormData) {
-  // Mock action
+  void projectId;
+  void formData;
 }
 
-export async function deleteEnvironmentVariable(id: string, projectId: string) {
-  // Mock action
+export async function deleteEnvironmentVariable(projectId: string, id: string) {
+  void projectId;
+  void id;
 }

@@ -10,7 +10,7 @@ import { createOAuthState, verifyOAuthState } from "../lib/auth/oauth-state";
 import { verifyWebhookSignature, generateWebhookSecret } from "../lib/github/webhook";
 import { redactSensitiveData, redactLogs } from "../lib/security/redaction";
 import { validateBuildCommand, validateOutputDirectory } from "../lib/security/command-sanitizer";
-import { SECURITY_HEADERS, ANTI_CACHE_HEADERS, getSecurityHeadersRecord } from "../lib/security/headers";
+import { ANTI_CACHE_HEADERS, getSecurityHeadersRecord } from "../lib/security/headers";
 
 let passedCount = 0;
 let totalCount = 0;

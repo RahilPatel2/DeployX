@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify, JWTPayload } from "jose";
 import { cookies } from "next/headers";
 import mongoose from "mongoose";
+import crypto from "crypto";
 
 export const SESSION_COOKIE_NAME = "session";
 export const SESSION_DURATION_SECONDS = 7 * 24 * 60 * 60; // 7 days
@@ -44,6 +45,8 @@ export const SESSION_COOKIE_OPTIONS = {
 
 export interface SessionPayload extends JWTPayload {
   userId: string;
+  sessionId?: string;
+  tokenVersion?: number;
 }
 
 export async function encrypt(payload: JWTPayload): Promise<string> {
@@ -70,9 +73,22 @@ export async function decrypt(input: string): Promise<SessionPayload | null> {
   }
 }
 
-export async function createSession(userId: string): Promise<string> {
+export async function createSession(
+  userId: string,
+  options?: {
+    sessionId?: string;
+    tokenVersion?: number;
+  }
+): Promise<string> {
   const expires = new Date(Date.now() + SESSION_DURATION_SECONDS * 1000);
-  const sessionToken = await encrypt({ userId, expires: expires.toISOString() });
+  const sessionId = options?.sessionId || crypto.randomUUID();
+  const tokenVersion = options?.tokenVersion ?? 0;
+  const sessionToken = await encrypt({
+    userId,
+    sessionId,
+    tokenVersion,
+    expires: expires.toISOString(),
+  });
 
   try {
     const cookieStore = await cookies();
@@ -87,9 +103,15 @@ export async function createSession(userId: string): Promise<string> {
   return sessionToken;
 }
 
-export async function rotateSession(userId: string): Promise<string> {
+export async function rotateSession(
+  userId: string,
+  options?: {
+    sessionId?: string;
+    tokenVersion?: number;
+  }
+): Promise<string> {
   await clearSession();
-  return await createSession(userId);
+  return await createSession(userId, options);
 }
 
 function extractTokenFromRequest(req: Request): string | undefined {

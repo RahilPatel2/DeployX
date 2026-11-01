@@ -478,7 +478,10 @@ export const CloudflareProvider = {
       return existing;
     }
 
-    const [owner, repo_name] = repoFullName.split("/");
+    const { normalizeRepository } = await import("@/lib/github/repository");
+    const norm = normalizeRepository(repoFullName);
+    const owner = norm?.owner || repoFullName.split("/")[0] || "";
+    const repo_name = norm?.repo || repoFullName.split("/")[1] || "";
 
     try {
       return await cfRequest<CloudflarePagesProject>(`/accounts/{account_id}/pages/projects`, {
@@ -551,6 +554,25 @@ export const CloudflareProvider = {
         body: { branch },
       }
     );
+  },
+
+  /**
+   * Lists recent deployments for a Cloudflare Pages project.
+   */
+  async listDeployments(
+    projectName: string,
+    perPage: number = 5
+  ): Promise<CloudflarePagesDeployment[]> {
+    const cleanName = sanitizePagesProjectName(projectName);
+    try {
+      const res = await cfRequest<CloudflarePagesDeployment[]>(
+        `/accounts/{account_id}/pages/projects/${cleanName}/deployments?per_page=${perPage}`,
+        { method: "GET" }
+      );
+      return res || [];
+    } catch {
+      return [];
+    }
   },
 
   /**

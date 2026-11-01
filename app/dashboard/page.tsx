@@ -3,7 +3,7 @@ import { FolderKanban, Activity, Globe, GitBranch, Plus, ArrowUpRight } from "lu
 import dynamic from "next/dynamic";
 import { RecentDeploymentsTable } from "@/components/dashboard/recent-deployments";
 import Link from "next/link";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import mongoose from "mongoose";
 import connectToDatabase from "@/lib/mongodb/client";
 import { requireAuth } from "@/lib/auth/session";

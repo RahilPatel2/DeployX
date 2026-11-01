@@ -3,7 +3,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
 
-export function Analytics({ projectId: _projectId }: { projectId?: string }) {
+export function Analytics({ projectId }: { projectId?: string } = {}) {
+  void projectId;
   return (
     <div className="space-y-4">
       <Card>

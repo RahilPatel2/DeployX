@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Loader2, Copy, Check, Search, ArrowDown } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Copy, Check, Search, ArrowDown, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -31,7 +31,7 @@ export function LogViewer({
     { refreshInterval: isBuilding ? 3000 : 0 }
   );
 
-  const rawLogs: string[] = data?.logs || [];
+  const rawLogs: string[] = useMemo(() => data?.logs || [], [data?.logs]);
 
   const filteredLogs = searchTerm.trim()
     ? rawLogs
@@ -69,6 +69,37 @@ export function LogViewer({
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error("Failed to copy logs");
+    }
+  };
+
+  const downloadLogs = async () => {
+    if (rawLogs.length === 0) {
+      toast.info("No logs to export");
+      return;
+    }
+    try {
+      let logsToDownload = rawLogs;
+      if (data?.isTailed) {
+        const fullRes = await fetch(`/api/deployments/${deploymentId}/logs`);
+        if (fullRes.ok) {
+          const fullData = await fullRes.json();
+          if (Array.isArray(fullData.logs)) {
+            logsToDownload = fullData.logs;
+          }
+        }
+      }
+      const blob = new Blob([logsToDownload.join("\n")], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `deployment-${deploymentId.slice(-6)}-build.log`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Logs exported successfully");
+    } catch {
+      toast.error("Failed to export logs");
     }
   };
 
@@ -149,6 +180,19 @@ export function LogViewer({
                 <span className="hidden sm:inline">Copy</span>
               </>
             )}
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={downloadLogs}
+            className="h-7 px-2 text-xs font-mono text-muted-foreground hover:text-foreground"
+            title="Export build logs"
+            aria-label="Export build logs to file"
+          >
+            <Download className="h-3.5 w-3.5 mr-1" />
+            <span className="hidden sm:inline">Export</span>
           </Button>
         </div>
       </div>

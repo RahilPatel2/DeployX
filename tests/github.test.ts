@@ -36,7 +36,8 @@ async function runGitHubTests() {
   console.log("\n2. Testing Tampered Token Ciphertext Rejection...");
   const parts = encrypted.split(":");
   // Tamper with the ciphertext component (last part)
-  const tamperedCipher = `${parts[0]}:${parts[1]}:${parts[2]}:${parts[3]}:ff${parts[4]?.substring(2) || "abcd"}`;
+  const lastChar = parts[4]?.slice(-1) === "a" ? "b" : "a";
+  const tamperedCipher = `${parts[0]}:${parts[1]}:${parts[2]}:${parts[3]}:${parts[4]?.slice(0, -1) || ""}${lastChar}`;
   assert.throws(
     () => decryptToken(tamperedCipher),
     /tampered|failed|invalid/i,

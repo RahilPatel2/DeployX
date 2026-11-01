@@ -1,8 +1,24 @@
 import { NextResponse } from "next/server";
-import { clearSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from "@/lib/auth/session";
+import { getSession, clearSession, SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from "@/lib/auth/session";
+import connectToDatabase from "@/lib/mongodb/client";
+import User from "@/models/User";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
+    const session = await getSession(req).catch(() => null);
+
+    if (session?.userId && session?.sessionId) {
+      try {
+        await connectToDatabase();
+        await User.updateOne(
+          { _id: session.userId },
+          { $pull: { sessions: { sessionId: session.sessionId } } }
+        );
+      } catch {
+        // Non-critical cleanup
+      }
+    }
+
     await clearSession();
 
     const response = NextResponse.json(
@@ -20,7 +36,6 @@ export async function POST() {
     return response;
   } catch (error) {
     console.error("[Auth] Logout POST error:", error);
-    // Still clear the cookie even if clearSession had an error
     const response = NextResponse.json(
       { success: true, message: "Signed out successfully." },
       { status: 200 }
@@ -36,6 +51,20 @@ export async function POST() {
 
 export async function GET(req: Request) {
   try {
+    const session = await getSession(req).catch(() => null);
+
+    if (session?.userId && session?.sessionId) {
+      try {
+        await connectToDatabase();
+        await User.updateOne(
+          { _id: session.userId },
+          { $pull: { sessions: { sessionId: session.sessionId } } }
+        );
+      } catch {
+        // Non-critical cleanup
+      }
+    }
+
     await clearSession();
   } catch (error) {
     console.error("[Auth] Logout GET error:", error);

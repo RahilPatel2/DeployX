@@ -11,7 +11,15 @@ const PROTECTED_FIELDS = [
   "role",
   "status",
   "passwordHash",
+  "email",
   "emailVerified",
+  "pendingEmail",
+  "emailVerificationToken",
+  "emailVerificationCode",
+  "emailVerificationExpires",
+  "passwordChangedAt",
+  "tokenVersion",
+  "sessions",
   "createdAt",
   "updatedAt",
   "lastLogin",
@@ -26,9 +34,29 @@ export async function GET(req: Request) {
 
     await connectToDatabase();
 
-    const user = await User.findById(session.userId).select("-passwordHash").lean();
+    const user = await User.findById(session.userId)
+      .select("-passwordHash -emailVerificationToken -emailVerificationCode")
+      .lean();
+
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Check account status
+    if (user.status === "disabled") {
+      return NextResponse.json({ error: "Account disabled" }, { status: 403 });
+    }
+
+    // Check session validity against tokenVersion if version was issued in session
+    if (
+      user.tokenVersion !== undefined &&
+      session.tokenVersion !== undefined &&
+      session.tokenVersion < user.tokenVersion
+    ) {
+      return NextResponse.json(
+        { error: "Session has expired or was revoked. Please log in again." },
+        { status: 401 }
+      );
     }
 
     return NextResponse.json({ user });
@@ -76,15 +104,30 @@ async function handleProfileUpdate(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    if (user.status === "disabled") {
+      return NextResponse.json({ error: "Account disabled" }, { status: 403 });
+    }
+
+    if (
+      user.tokenVersion !== undefined &&
+      session.tokenVersion !== undefined &&
+      session.tokenVersion < user.tokenVersion
+    ) {
+      return NextResponse.json(
+        { error: "Session has expired or was revoked. Please log in again." },
+        { status: 401 }
+      );
+    }
+
     const { name, username, phone, bio, avatar, preferences } = body;
 
     // Validate Display Name
     if (name !== undefined) {
       if (typeof name !== "string" || !name.trim()) {
-        return NextResponse.json({ error: "Name cannot be empty" }, { status: 400 });
+        return NextResponse.json({ error: "Display name cannot be empty" }, { status: 400 });
       }
       if (name.trim().length > 64) {
-        return NextResponse.json({ error: "Name must be 64 characters or fewer" }, { status: 400 });
+        return NextResponse.json({ error: "Display name must be 64 characters or fewer" }, { status: 400 });
       }
       user.name = name.trim();
     }
@@ -200,6 +243,8 @@ async function handleProfileUpdate(req: Request) {
 
     const safeUser = user.toObject();
     delete safeUser.passwordHash;
+    delete safeUser.emailVerificationToken;
+    delete safeUser.emailVerificationCode;
 
     return NextResponse.json({ user: safeUser });
   } catch (error: unknown) {

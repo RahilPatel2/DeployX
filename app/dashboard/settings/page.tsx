@@ -4,6 +4,7 @@ import useSWR from "swr";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   User,
   Shield,
@@ -11,13 +12,10 @@ import {
   Bell,
   GitFork,
   ArrowRight,
-  Loader2,
 } from "lucide-react";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
 export default function SettingsGeneralPage() {
-  const { data, isLoading } = useSWR("/api/auth/profile", fetcher);
+  const { data, isLoading } = useSWR<{ user?: { name?: string; username?: string; email?: string } }>("/api/auth/profile");
   const user = data?.user;
 
   const quickLinks = [
@@ -66,8 +64,8 @@ export default function SettingsGeneralPage() {
       <Card className="bg-card/50 backdrop-blur border-border/50">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Account Overview</CardTitle>
-            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+            <CardTitle className="text-base sm:text-lg">Account Overview</CardTitle>
+            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-xs">
               Active Member
             </Badge>
           </div>
@@ -76,9 +74,14 @@ export default function SettingsGeneralPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          {isLoading && !data ? (
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="p-3 rounded-lg border border-border/40 bg-muted/20 space-y-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ))}
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-3">
@@ -103,7 +106,7 @@ export default function SettingsGeneralPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         {quickLinks.map((item) => (
           <Link key={item.href} href={item.href} className="group">
-            <Card className="h-full bg-card/40 backdrop-blur border-border/50 hover:border-primary/50 transition-all hover:shadow-md">
+            <Card className="h-full bg-card/40 backdrop-blur border-border/50 hover:border-primary/50 transition-all hover:shadow-md active:scale-[0.99]">
               <CardContent className="p-5 flex items-start gap-4">
                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-primary">
                   <item.icon className="h-5 w-5" />

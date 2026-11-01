@@ -8,13 +8,14 @@ if (typeof window !== "undefined") {
 interface MongooseCache {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
+  preferredUri?: string | null;
 }
 
 declare global {
   var __mongooseCache: MongooseCache | undefined;
 }
 
-const cached: MongooseCache = global.__mongooseCache || { conn: null, promise: null };
+const cached: MongooseCache = global.__mongooseCache || { conn: null, promise: null, preferredUri: null };
 if (!global.__mongooseCache) {
   global.__mongooseCache = cached;
 }
@@ -66,21 +67,23 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     };
 
     cached.promise = (async () => {
+      const targetUri = cached.preferredUri || uri;
       try {
-        const m = await mongoose.connect(uri, opts);
+        const m = await mongoose.connect(targetUri, opts);
         console.log(`[MongoDB] Connected successfully to database: ${dbName}`);
         return m;
       } catch (err: unknown) {
         const errMessage = err instanceof Error ? err.message : String(err);
         const isDnsError =
           (errMessage.includes("querySrv") || errMessage.includes("ECONNREFUSED")) &&
-          uri.startsWith("mongodb+srv://");
+          targetUri.startsWith("mongodb+srv://");
 
         if (isDnsError) {
           const directUri = getDirectFallbackUri(uri, dbName);
           if (directUri) {
             console.warn("[MongoDB] SRV lookup failed on local DNS. Falling back to direct replica set hosts...");
             const m = await mongoose.connect(directUri, opts);
+            cached.preferredUri = directUri;
             console.log(`[MongoDB] Connected successfully via replica set fallback to database: ${dbName}`);
             return m;
           }

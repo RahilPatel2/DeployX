@@ -64,6 +64,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { checkRateLimit } = await import("@/lib/auth/rate-limit");
+    const rl = checkRateLimit(`avatar_upload:${session.userId}`, 15, 10 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many avatar upload attempts. Please wait a few minutes before trying again." },
+        { status: 429 }
+      );
+    }
+
     const formData = await req.formData().catch(() => null);
     if (!formData) {
       return NextResponse.json({ error: "Invalid form data submission" }, { status: 400 });

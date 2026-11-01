@@ -56,9 +56,9 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://avatars.githubusercontent.com https://*.githubusercontent.com https://github.com",
+      "img-src 'self' data: blob: https://avatars.githubusercontent.com https://*.githubusercontent.com https://github.com https://*.googleusercontent.com https://lh3.googleusercontent.com",
       "font-src 'self' data:",
-      "connect-src 'self' https://api.github.com https://api.cloudflare.com",
+      "connect-src 'self' https://api.github.com https://api.cloudflare.com https://accounts.google.com https://oauth2.googleapis.com https://openidconnect.googleapis.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -75,6 +75,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
       { protocol: "https", hostname: "*.githubusercontent.com" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "*.googleusercontent.com" },
     ],
   },
   async headers() {

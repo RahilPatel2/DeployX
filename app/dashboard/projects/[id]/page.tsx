@@ -21,16 +21,30 @@ import {
   Radio,
   RefreshCw,
   Webhook,
+  Trash2,
+  AlertTriangle,
+  Terminal,
+  ShieldAlert,
 } from "lucide-react";
 import { DeploymentActivityChart } from "@/components/dashboard/deployment-chart";
 import { RecentDeploymentsTable } from "@/components/dashboard/recent-deployments";
+import { LogViewer } from "@/components/deployments/log-viewer";
+import { Analytics } from "@/components/projects/analytics";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { use, useState } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProjectData {
   _id: string;
@@ -74,11 +88,34 @@ function ProjectSettingsTab({
   const [isSavingGit, setIsSavingGit] = useState(false);
   const [isRegisteringWebhook, setIsRegisteringWebhook] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
+  const router = useRouter();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [confirmProjectName, setConfirmProjectName] = useState("");
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
 
   const { data: webhookData, mutate: mutateWebhook } = useSWR(
-    `/api/projects/${project._id}/webhook`,
-    fetcher
+    `/api/projects/${project._id}/webhook`
   );
+
+  const handleDeleteProject = async () => {
+    setIsDeletingProject(true);
+    try {
+      const res = await fetch(`/api/projects/${project._id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed to delete project");
+      }
+
+      toast.success("Project deleted successfully");
+      router.push("/dashboard/projects");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Error deleting project");
+      setIsDeletingProject(false);
+    }
+  };
 
   const handleSaveSettings = async () => {
     setIsSavingSettings(true);
@@ -475,6 +512,128 @@ function ProjectSettingsTab({
           </Button>
         </CardFooter>
       </Card>
+
+      {/* Danger Zone */}
+      <Card className="border-destructive/40 bg-destructive/5 backdrop-blur">
+        <CardHeader>
+          <CardTitle className="text-lg text-destructive flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>
+            Destructive actions that permanently impact your project and deployments.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="font-semibold text-sm text-foreground">Delete this project</div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Permanently delete this project, all deployments, custom domains, and environment variables.
+              </p>
+            </div>
+            <Button
+              variant="destructive"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="shrink-0"
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Delete Project
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5" />
+              Delete Project
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Please type <strong className="text-foreground">{project.name}</strong> to confirm deletion.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <Input
+              value={confirmProjectName}
+              onChange={(e) => setConfirmProjectName(e.target.value)}
+              placeholder={project.name}
+              className="text-xs font-mono"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setConfirmProjectName("");
+              }}
+              disabled={isDeletingProject}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={confirmProjectName !== project.name || isDeletingProject}
+              onClick={handleDeleteProject}
+            >
+              {isDeletingProject ? "Deleting..." : "Permanently Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+interface ProjectLogsDeployment {
+  _id: string;
+  branch: string;
+  status: string;
+}
+
+function ProjectLogsTab({ projectId }: { projectId: string }) {
+  const { data, isLoading } = useSWR<{ deployments: ProjectLogsDeployment[] }>(
+    `/api/deployments?projectId=${projectId}&limit=1`
+  );
+  const latestDeployment = data?.deployments?.[0];
+
+  if (isLoading) {
+    return <Skeleton className="h-96 w-full rounded-lg" />;
+  }
+
+  if (!latestDeployment) {
+    return (
+      <Card className="bg-card/50 backdrop-blur border-border/50">
+        <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+          <Terminal className="h-10 w-10 text-muted-foreground mb-3" />
+          <h3 className="font-semibold text-lg">No Build Logs Available</h3>
+          <p className="text-sm text-muted-foreground max-w-sm mt-1">
+            Trigger your first deployment to view real-time streaming build logs and terminal output.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>
+          Latest Build: <strong className="text-foreground font-mono">{latestDeployment._id.slice(-7)}</strong> ({latestDeployment.branch})
+        </span>
+        <Badge variant="outline" className="capitalize text-[11px]">
+          {latestDeployment.status}
+        </Badge>
+      </div>
+      <LogViewer deploymentId={latestDeployment._id} status={latestDeployment.status} />
     </div>
   );
 }
@@ -484,7 +643,7 @@ export default function ProjectPage(props: { params: Promise<{ id: string }> }) 
   const router = useRouter();
   const [deploying, setDeploying] = useState(false);
 
-  const { data, error, isLoading, mutate } = useSWR(`/api/projects/${params.id}`, fetcher);
+  const { data, error, isLoading, mutate } = useSWR(`/api/projects/${params.id}`);
   const project: ProjectData | undefined = data?.project;
 
   const handleDeploy = async () => {
@@ -513,10 +672,41 @@ export default function ProjectPage(props: { params: Promise<{ id: string }> }) 
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !project) {
     return (
-      <div className="p-8 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-48 rounded-md" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-28 rounded-md" />
+            <Skeleton className="h-9 w-24 rounded-md" />
+          </div>
+        </div>
+
+        <div className="border-b border-border/50 pb-2 flex gap-4">
+          <Skeleton className="h-8 w-20 rounded-md" />
+          <Skeleton className="h-8 w-24 rounded-md" />
+          <Skeleton className="h-8 w-20 rounded-md" />
+          <Skeleton className="h-8 w-32 rounded-md" />
+          <Skeleton className="h-8 w-20 rounded-md" />
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </div>
       </div>
     );
   }
@@ -725,11 +915,11 @@ export default function ProjectPage(props: { params: Promise<{ id: string }> }) 
         <TabsContent value="deployments" className="mt-6 space-y-6">
           <RecentDeploymentsTable projectId={project._id} />
         </TabsContent>
-        <TabsContent value="analytics">
-          <div className="py-8 text-center text-muted-foreground">Analytics view coming soon...</div>
+        <TabsContent value="analytics" className="mt-6 space-y-6">
+          <Analytics projectId={project._id} />
         </TabsContent>
-        <TabsContent value="logs">
-          <div className="py-8 text-center text-muted-foreground">Runtime logs coming soon...</div>
+        <TabsContent value="logs" className="mt-6 space-y-6">
+          <ProjectLogsTab projectId={project._id} />
         </TabsContent>
 
         {/* Project Settings Tab */}

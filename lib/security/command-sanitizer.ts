@@ -25,6 +25,7 @@ const ALLOWED_EXECUTABLES = new Set([
   "turbo",
   "cross-env",
   "rimraf",
+  "wrangler",
 ]);
 
 // Shell dangerous sequences that attempt subshell execution or dangerous piping

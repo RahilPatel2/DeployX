@@ -35,7 +35,6 @@ if (fs.existsSync(envLocalPath)) {
 }
 import {
   normalizeRepository,
-  extractRepositoryFromProject,
   validateRepositoryContract,
 } from "../lib/github/repository";
 import { POST as createDeploymentHandler } from "../app/api/deployments/route";
@@ -192,7 +191,7 @@ async function runDeploymentContractTests() {
     // -------------------------------------------------------------
     console.log("\n5. Testing Deployment Using Saved Repository & Branch...");
     // Mock GitHub commit lookup
-    global.fetch = async (url: any) => {
+    global.fetch = async (url: string | URL | Request) => {
       const urlStr = url.toString();
       if (urlStr.includes("api.github.com/repos/RahilPatel2/Weatherly/commits/main")) {
         return new Response(
@@ -232,7 +231,7 @@ async function runDeploymentContractTests() {
     // -------------------------------------------------------------
     console.log("\n6. Testing Failed Provider Response Handling...");
     // Mock GitHub branch failure (e.g. branch deleted or repo renamed)
-    global.fetch = async (url: any) => {
+    global.fetch = async (url: string | URL | Request) => {
       const urlStr = url.toString();
       if (urlStr.includes("api.github.com/repos/")) {
         return new Response(
@@ -289,10 +288,15 @@ async function runDeploymentContractTests() {
     await Project.deleteMany({ userId: { $in: [userAId, userBId] } });
     await Deployment.deleteMany({ userId: { $in: [userAId, userBId] } });
     await Integration.deleteMany({ userId: { $in: [userAId, userBId] } });
+    await mongoose.disconnect();
   }
 }
 
-runDeploymentContractTests().catch((err) => {
-  console.error("Deployment Contract Test Suite Failed:", err);
-  process.exit(1);
-});
+runDeploymentContractTests()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("Deployment Contract Test Suite Failed:", err);
+    process.exit(1);
+  });

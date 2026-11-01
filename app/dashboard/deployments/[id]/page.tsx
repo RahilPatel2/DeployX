@@ -17,6 +17,7 @@ import {
   History,
 } from "lucide-react";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LogViewer } from "@/components/deployments/log-viewer";
 import { use, useState } from "react";
 import useSWR from "swr";
@@ -24,15 +25,13 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
 export default function DeploymentDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const router = useRouter();
   const [redeploying, setRedeploying] = useState(false);
 
   // Poll every 3 seconds if building or queued
-  const { data, error, isLoading } = useSWR(`/api/deployments/${params.id}`, fetcher, {
+  const { data, error, isLoading } = useSWR(`/api/deployments/${params.id}`, {
     refreshInterval: (data) => 
       data?.deployment && ['QUEUED', 'BUILDING'].includes(data.deployment.status) ? 3000 : 0
   });
@@ -61,8 +60,60 @@ export default function DeploymentDetailPage(props: { params: Promise<{ id: stri
     }
   };
 
-  if (isLoading) {
-    return <div className="p-8 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  if (isLoading && !data?.deployment) {
+    return (
+      <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        {/* Header Skeleton */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-48 rounded-md" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-5 w-24 rounded-full" />
+            </div>
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-24 rounded-md" />
+            <Skeleton className="h-9 w-28 rounded-md" />
+          </div>
+        </div>
+
+        {/* Pipeline Stepper Skeleton */}
+        <Card className="bg-card/50 backdrop-blur border-border/50 p-6">
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-40" />
+            <div className="grid grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex flex-col items-center gap-2">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* Overview & Logs Skeletons */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="bg-card/50 backdrop-blur border-border/50 p-6 space-y-4">
+            <Skeleton className="h-5 w-32" />
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-4/5" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </Card>
+          <Card className="md:col-span-2 bg-card/50 backdrop-blur border-border/50 p-6 space-y-4">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-64 w-full rounded-md" />
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   if (error || !data?.deployment) {
@@ -73,9 +124,32 @@ export default function DeploymentDetailPage(props: { params: Promise<{ id: stri
 
   const isTerminal = ['READY', 'FAILED', 'CANCELED'].includes(deployment.status);
   const isFailed = deployment.status === 'FAILED';
+  const isReady = deployment.status === 'READY';
 
-  const steps = ["QUEUED", "BUILDING", "READY"];
-  const currentStepIndex = steps.indexOf(deployment.status) !== -1 ? steps.indexOf(deployment.status) : (isFailed ? 1 : 0);
+  // Truthful 4-step pipeline: Queued -> Building -> Uploading -> Deployed
+  const PIPELINE_STAGES = [
+    { key: "queued", label: "Queued" },
+    { key: "building", label: "Building" },
+    { key: "uploading", label: "Uploading" },
+    { key: "deployed", label: "Deployed" },
+  ];
+
+  const currentStage = deployment.stage || (
+    deployment.status === "QUEUED" ? "queued" :
+    deployment.status === "READY" ? "deployed" :
+    deployment.status === "FAILED" ? "failed" :
+    "building"
+  );
+
+  let currentStageIndex = 0;
+  if (currentStage === "queued") currentStageIndex = 0;
+  else if (["cloning", "installing", "building"].includes(currentStage)) currentStageIndex = 1;
+  else if (currentStage === "uploading") currentStageIndex = 2;
+  else if (currentStage === "deployed" || isReady) currentStageIndex = 3;
+  else if (isFailed) {
+    if (deployment.stage === "uploading") currentStageIndex = 2;
+    else currentStageIndex = 1;
+  }
 
   return (
     <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 pt-4 sm:pt-6 max-w-7xl mx-auto w-full">
@@ -118,7 +192,7 @@ export default function DeploymentDetailPage(props: { params: Promise<{ id: stri
           )}
         </div>
         <div className="flex items-center gap-2">
-          {deployment.url && (
+          {deployment.url && isReady && (
             <a href={`https://${deployment.url}`} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "outline" })}>
               Visit Live Site <ExternalLink className="ml-2 h-4 w-4" />
             </a>
@@ -148,16 +222,45 @@ export default function DeploymentDetailPage(props: { params: Promise<{ id: stri
             <div className="flex items-center justify-between w-full relative">
               <div className="absolute top-1/2 left-0 w-full h-[2px] bg-border/50 -z-10 -translate-y-1/2" />
               
-              {["Queued", "Building", "Ready"].map((step, i) => {
-                const isActive = currentStepIndex >= i;
-                const isCurrent = currentStepIndex === i && !isTerminal;
+              {PIPELINE_STAGES.map((step, i) => {
+                const isStepFailed = isFailed && currentStageIndex === i;
+                const isActive = currentStageIndex >= i && !isStepFailed;
+                const isCurrent = currentStageIndex === i && !isTerminal;
                 
                 return (
-                  <div key={step} className="flex flex-col items-center gap-2 bg-card p-2">
-                    <div className={`h-6 w-6 rounded-full flex items-center justify-center ring-4 ring-card ${isActive ? 'bg-emerald-500/20 text-emerald-500' : 'bg-muted text-muted-foreground'} ${isCurrent ? 'animate-pulse bg-blue-500/20 text-blue-500' : ''}`}>
-                      {isActive && !isCurrent ? <CheckCircle2 className="h-4 w-4" /> : <div className="h-2 w-2 rounded-full bg-current" />}
+                  <div key={step.key} className="flex flex-col items-center gap-2 bg-card p-2 z-10">
+                    <div
+                      className={`h-7 w-7 rounded-full flex items-center justify-center ring-4 ring-card transition-colors ${
+                        isStepFailed
+                          ? 'bg-destructive/20 text-destructive'
+                          : isActive && !isCurrent
+                          ? 'bg-emerald-500/20 text-emerald-500'
+                          : isCurrent
+                          ? 'animate-pulse bg-blue-500/20 text-blue-500 ring-blue-500/30'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {isStepFailed ? (
+                        <XCircle className="h-4 w-4" />
+                      ) : isActive && !isCurrent ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <div className="h-2 w-2 rounded-full bg-current" />
+                      )}
                     </div>
-                    <span className="text-xs font-medium">{step}</span>
+                    <span
+                      className={`text-xs font-medium ${
+                        isStepFailed
+                          ? 'text-destructive font-semibold'
+                          : isCurrent
+                          ? 'text-blue-500 font-semibold'
+                          : isActive
+                          ? 'text-foreground'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      {step.label}
+                    </span>
                   </div>
                 );
               })}
