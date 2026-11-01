@@ -65,7 +65,8 @@ export function CtaSection() {
                 transition={SPRINGS.snappy}
               >
                 <Link
-                  href="/login"
+                  href="/signup"
+                  prefetch={true}
                   className="px-8 py-3.5 rounded-xl font-semibold text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 shadow-lg shadow-primary/25 hover:shadow-primary/40 flex items-center gap-2 cursor-pointer"
                 >
                   <span>Start Deploying Free</span>

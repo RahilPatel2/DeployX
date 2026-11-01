@@ -37,7 +37,7 @@ const TIERS: PricingTier[] = [
       "Community Discord Support",
     ],
     ctaLabel: "Start Building Free",
-    ctaHref: "/login",
+    ctaHref: "/signup",
     ctaVariant: "outline",
   },
   {
@@ -58,7 +58,7 @@ const TIERS: PricingTier[] = [
       "Priority Email & Slack Support",
     ],
     ctaLabel: "Deploy with Pro",
-    ctaHref: "/login",
+    ctaHref: "/signup",
     ctaVariant: "primary",
   },
   {
@@ -219,6 +219,7 @@ export function PricingSection() {
                 <div className="mt-8 pt-4">
                   <Link
                     href={tier.ctaHref}
+                    prefetch={true}
                     className={`w-full py-3 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer shadow-sm active:scale-98 ${
                       tier.ctaVariant === "primary"
                         ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-primary/20"

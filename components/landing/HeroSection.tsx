@@ -45,6 +45,7 @@ function MagneticButton({
       <Link
         ref={ref}
         href={href}
+        prefetch={true}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         className={className}

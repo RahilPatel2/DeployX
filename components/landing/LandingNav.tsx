@@ -6,6 +6,7 @@ import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-
 import { buttonVariants, Button } from "@/components/ui/button";
 import { Menu, X, ArrowRight, GitBranch, ShieldCheck, Zap, Globe, Sparkles } from "lucide-react";
 import { SPRINGS, EASING } from "./motion-utils";
+import { useAuthSession } from "@/lib/auth/use-session";
 
 interface NavItem {
   name: string;
@@ -28,6 +29,7 @@ export function LandingNav() {
   const [hoveredNav, setHoveredNav] = React.useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { scrollY } = useScroll();
+  const { isAuthenticated } = useAuthSession();
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     setIsScrolled(latest > 20);
@@ -107,28 +109,51 @@ export function LandingNav() {
 
         {/* Action Buttons with Magnetic Scaling & Glow */}
         <div className="hidden sm:flex items-center gap-3">
-          <Link
-            href="/login"
-            className="text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5"
-          >
-            Sign In
-          </Link>
-          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={SPRINGS.snappy}>
-            <Link
-              href="/signup"
-              className={buttonVariants({
-                size: "sm",
-                className:
-                  "rounded-lg px-4 text-xs font-semibold shadow-xs bg-primary text-primary-foreground hover:bg-primary/90 relative group overflow-hidden",
-              })}
-            >
-              <span className="relative z-10 flex items-center gap-1.5">
-                Get Started
-                <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-            </Link>
-          </motion.div>
+          {isAuthenticated ? (
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={SPRINGS.snappy}>
+              <Link
+                href="/dashboard"
+                prefetch={true}
+                className={buttonVariants({
+                  size: "sm",
+                  className:
+                    "rounded-lg px-4 text-xs font-semibold shadow-xs bg-primary text-primary-foreground hover:bg-primary/90 relative group overflow-hidden",
+                })}
+              >
+                <span className="relative z-10 flex items-center gap-1.5">
+                  Go to Dashboard
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </span>
+              </Link>
+            </motion.div>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                prefetch={true}
+                className="text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5"
+              >
+                Sign In
+              </Link>
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={SPRINGS.snappy}>
+                <Link
+                  href="/signup"
+                  prefetch={true}
+                  className={buttonVariants({
+                    size: "sm",
+                    className:
+                      "rounded-lg px-4 text-xs font-semibold shadow-xs bg-primary text-primary-foreground hover:bg-primary/90 relative group overflow-hidden",
+                  })}
+                >
+                  <span className="relative z-10 flex items-center gap-1.5">
+                    Get Started
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                </Link>
+              </motion.div>
+            </>
+          )}
         </div>
 
         {/* Mobile menu hamburger */}
@@ -222,21 +247,36 @@ export function LandingNav() {
                 </motion.div>
               ))}
 
-              <div className="pt-4 border-t border-border/40 grid grid-cols-2 gap-3">
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={buttonVariants({ variant: "outline", size: "sm", className: "w-full justify-center" })}
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/signup"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={buttonVariants({ size: "sm", className: "w-full justify-center font-semibold" })}
-                >
-                  Get Started
-                </Link>
+              <div className="pt-4 border-t border-border/40">
+                {isAuthenticated ? (
+                  <Link
+                    href="/dashboard"
+                    prefetch={true}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={buttonVariants({ size: "sm", className: "w-full justify-center font-semibold" })}
+                  >
+                    Go to Dashboard
+                  </Link>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Link
+                      href="/login"
+                      prefetch={true}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={buttonVariants({ variant: "outline", size: "sm", className: "w-full justify-center" })}
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/signup"
+                      prefetch={true}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={buttonVariants({ size: "sm", className: "w-full justify-center font-semibold" })}
+                    >
+                      Get Started
+                    </Link>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
