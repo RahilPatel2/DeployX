@@ -64,6 +64,13 @@ interface NavSearchResult {
   keywords: string[];
 }
 
+// In-memory LRU search cache (capped at 50 queries)
+const SEARCH_LRU_CACHE = new Map<
+  string,
+  { projects: ProjectSearchResult[]; deployments: DeploymentSearchResult[] }
+>();
+const MAX_SEARCH_CACHE_SIZE = 50;
+
 const STATIC_NAV_ITEMS: NavSearchResult[] = [
   {
     title: "Dashboard Overview",
@@ -209,6 +216,7 @@ export function CommandPalette() {
   const [remoteProjects, setRemoteProjects] = React.useState<ProjectSearchResult[]>([]);
   const [remoteDeployments, setRemoteDeployments] = React.useState<DeploymentSearchResult[]>([]);
   const latestQueryIdRef = React.useRef(0);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
 
   // Keyboard shortcut listener (⌘K / Ctrl+K) and custom event trigger
   React.useEffect(() => {
@@ -229,9 +237,9 @@ export function CommandPalette() {
     };
   }, []);
 
-  // Debounced network search for Projects and Deployments
+  // Debounced network search with LRU in-memory cache & AbortController
   React.useEffect(() => {
-    const trimmed = query.trim();
+    const trimmed = query.trim().toLowerCase();
     if (!trimmed) {
       const resetTimer = setTimeout(() => {
         setRemoteProjects([]);
@@ -241,6 +249,22 @@ export function CommandPalette() {
       return () => clearTimeout(resetTimer);
     }
 
+    // 1. Check in-memory LRU cache first for instant 0ms retrieval
+    const cachedResults = SEARCH_LRU_CACHE.get(trimmed);
+    if (cachedResults) {
+      setRemoteProjects(cachedResults.projects);
+      setRemoteDeployments(cachedResults.deployments);
+      setSearchingRemote(false);
+      return;
+    }
+
+    // 2. Abort previous in-flight request if user is still typing
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const currentQueryId = ++latestQueryIdRef.current;
     const startTimer = setTimeout(() => {
       setSearchingRemote(true);
@@ -248,17 +272,31 @@ export function CommandPalette() {
 
     const debounceTimer = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`, {
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error("Search request failed");
         const data = await res.json();
 
         // Prevent race conditions: ignore if newer query was initiated
         if (currentQueryId === latestQueryIdRef.current) {
-          setRemoteProjects(Array.isArray(data.projects) ? data.projects : []);
-          setRemoteDeployments(Array.isArray(data.deployments) ? data.deployments : []);
+          const projects = Array.isArray(data.projects) ? data.projects : [];
+          const deployments = Array.isArray(data.deployments) ? data.deployments : [];
+
+          // Store in LRU cache
+          if (SEARCH_LRU_CACHE.size >= MAX_SEARCH_CACHE_SIZE) {
+            const firstKey = SEARCH_LRU_CACHE.keys().next().value;
+            if (firstKey) SEARCH_LRU_CACHE.delete(firstKey);
+          }
+          SEARCH_LRU_CACHE.set(trimmed, { projects, deployments });
+
+          setRemoteProjects(projects);
+          setRemoteDeployments(deployments);
         }
-      } catch {
-        // Safe fallback: keep existing or empty without throwing
+      } catch (err: unknown) {
+        if ((err as Error)?.name === "AbortError") {
+          return; // Ignore aborted requests cleanly
+        }
         if (currentQueryId === latestQueryIdRef.current) {
           setRemoteProjects([]);
           setRemoteDeployments([]);
@@ -268,11 +306,12 @@ export function CommandPalette() {
           setSearchingRemote(false);
         }
       }
-    }, 150);
+    }, 120);
 
     return () => {
       clearTimeout(startTimer);
       clearTimeout(debounceTimer);
+      controller.abort();
     };
   }, [query]);
 
