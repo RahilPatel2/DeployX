@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { FolderKanban, Activity, Globe, GitBranch, Plus, ArrowUpRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import { RecentDeploymentsTable } from "@/components/dashboard/recent-deployments";
@@ -86,36 +88,39 @@ async function getAnalyticsData() {
   }
 }
 
-export default async function DashboardPage() {
+function DashboardAnalyticsSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* 4 Metric Cards Skeleton */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="bg-card/50 backdrop-blur border-border/50">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 p-4 sm:p-5">
+              <Skeleton className="h-4 w-20 rounded" />
+              <Skeleton className="h-4 w-4 rounded-full" />
+            </CardHeader>
+            <CardContent className="px-4 pb-4 sm:px-5 sm:pb-5 space-y-2">
+              <Skeleton className="h-7 w-16 rounded" />
+              <Skeleton className="h-3 w-24 rounded" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Chart Skeleton */}
+      <Card className="bg-card/50 backdrop-blur border-border/50 p-6 space-y-4">
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </Card>
+    </div>
+  );
+}
+
+async function AsyncDashboardContent() {
   const stats = await getAnalyticsData();
   const hasData = stats.activeProjects > 0 || stats.totalDeployments > 0;
 
   return (
-    <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-      {/* Header with Title and Quick Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Overview</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            {hasData
-              ? "Real-time deployment metrics and activity across your Cloudflare projects."
-              : "Welcome to DeployX. Connect a repository to start deploying."}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/dashboard/projects/new"
-            className={buttonVariants({
-              size: "sm",
-              className: "h-9 px-3.5 text-xs font-semibold gap-1.5 shadow-xs",
-            })}
-          >
-            <Plus className="h-4 w-4" />
-            <span>New Project</span>
-          </Link>
-        </div>
-      </div>
-
+    <div className="space-y-6">
       {/* Empty State Card */}
       {!hasData && (
         <Card className="border-border/60 bg-card/40 backdrop-blur p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-4 rounded-xl shadow-xs">
@@ -131,6 +136,7 @@ export default async function DashboardPage() {
           <div className="pt-2">
             <Link
               href="/dashboard/projects/new"
+              prefetch={true}
               className={buttonVariants({ size: "default", className: "h-9 px-5 text-xs font-semibold gap-2" })}
             >
               <span>Deploy First Project</span>
@@ -196,6 +202,40 @@ export default async function DashboardPage() {
           <RecentDeploymentsTable />
         </div>
       )}
+    </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <div className="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      {/* Header with Title and Quick Action (Renders Immediately with Zero Latency) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Overview</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Real-time deployment metrics and activity across your Cloudflare projects.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/projects/new"
+            prefetch={true}
+            className={buttonVariants({
+              size: "sm",
+              className: "h-9 px-3.5 text-xs font-semibold gap-1.5 shadow-xs active:scale-95 transition-transform",
+            })}
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Project</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Streamed Analytics Content via React Suspense */}
+      <Suspense fallback={<DashboardAnalyticsSkeleton />}>
+        <AsyncDashboardContent />
+      </Suspense>
     </div>
   );
 }
