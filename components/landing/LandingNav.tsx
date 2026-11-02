@@ -58,7 +58,7 @@ export function LandingNav() {
           : "border-b border-transparent bg-transparent"
       }`}
     >
-      <div className="container flex h-16 items-center justify-between mx-auto px-4 sm:px-6">
+      <div className="container flex h-14 sm:h-16 items-center justify-between mx-auto px-3 sm:px-6">
         {/* Brand Logo with Interactive Glow */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <motion.div

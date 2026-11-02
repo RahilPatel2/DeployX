@@ -171,10 +171,12 @@
   }
 }
 
+.no-scrollbar,
 .scrollbar-none {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+.no-scrollbar::-webkit-scrollbar,
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }

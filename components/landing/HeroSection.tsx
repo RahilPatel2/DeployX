@@ -113,19 +113,19 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative z-10 w-full pt-12 sm:pt-20 pb-16 overflow-hidden">
-      <div className="container mx-auto px-4 sm:px-6 flex flex-col items-center text-center">
+    <section className="relative z-10 w-full pt-4 sm:pt-20 pb-8 sm:pb-16 overflow-hidden">
+      <div className="container mx-auto px-2 sm:px-6 flex flex-col items-center text-center">
         <motion.div
           variants={containerVariants}
           initial={reducedMotion ? false : "hidden"}
           animate="visible"
-          className="max-w-4xl flex flex-col items-center"
+          className="max-w-4xl flex flex-col items-center w-full"
         >
           {/* Animated Pulsing Status Beacon */}
           <motion.div
             variants={itemVariants}
             whileHover={{ scale: 1.04 }}
-            className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-4 py-1.5 text-xs font-medium text-foreground backdrop-blur-md shadow-xs mb-6 cursor-default group"
+            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-primary/25 bg-primary/5 px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium text-foreground backdrop-blur-md shadow-xs mb-3 sm:mb-6 cursor-default group"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -136,12 +136,12 @@ export function HeroSection() {
             </span>
             <span className="text-muted-foreground/40">•</span>
             <span className="text-foreground font-semibold flex items-center gap-1">
-              Zero Cold Starts on Cloudflare <Sparkles className="h-3 w-3 text-amber-400" />
+              Zero Cold Starts <Sparkles className="h-3 w-3 text-amber-400 hidden sm:inline" />
             </span>
           </motion.div>
 
           {/* Cinematic Headline with Staggered Word Reveals */}
-          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[76px] font-black tracking-tight leading-[1.06] text-foreground mb-6 max-w-4xl">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-[76px] font-black tracking-tight leading-[1.08] text-foreground mb-3 sm:mb-6 max-w-4xl">
             {headlineWords.map((word, i) => (
               <React.Fragment key={i}>
                 <motion.span
@@ -164,7 +164,7 @@ export function HeroSection() {
           {/* Subtitle with Fade and Smooth Elevation */}
           <motion.p
             variants={itemVariants}
-            className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto tracking-normal leading-relaxed font-normal mb-8"
+            className="text-xs sm:text-lg text-muted-foreground max-w-2xl mx-auto tracking-normal leading-relaxed font-normal mb-5 sm:mb-8 line-clamp-3 sm:line-clamp-none px-2"
           >
             Connect your repository, pick your branch, and ship globally in seconds. DeployX delivers automated
             framework detection, sandboxed builds, credential scrubbing, and instant Cloudflare Pages distribution.
@@ -173,19 +173,19 @@ export function HeroSection() {
           {/* CTA Buttons with Magnetic Hover Animation & Gradient Aura */}
           <motion.div
             variants={itemVariants}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full sm:w-auto"
+            className="flex flex-row items-center justify-center gap-2 sm:gap-3.5 w-full max-w-sm sm:max-w-none sm:w-auto px-2"
           >
             <MagneticButton
               href="/dashboard/projects/new"
               className={buttonVariants({
                 size: "lg",
                 className:
-                  "w-full sm:w-auto h-12 px-7 text-sm font-semibold rounded-xl shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 relative overflow-hidden group border border-primary/40",
+                  "flex-1 sm:flex-initial sm:w-auto h-10 sm:h-12 px-3 sm:px-7 text-xs sm:text-sm font-semibold rounded-xl shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 relative overflow-hidden group border border-primary/40 flex items-center justify-center",
               })}
             >
-              <span className="relative z-10 flex items-center gap-2">
-                Deploy a Project
-                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+              <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+                Deploy Project
+                <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform duration-200 group-hover:translate-x-1" />
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/25 via-transparent to-primary/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </MagneticButton>
@@ -196,29 +196,29 @@ export function HeroSection() {
                 variant: "outline",
                 size: "lg",
                 className:
-                  "w-full sm:w-auto h-12 px-7 text-sm font-medium rounded-xl border-border/80 bg-card/60 backdrop-blur-md hover:bg-muted/60 transition-all",
+                  "flex-1 sm:flex-initial sm:w-auto h-10 sm:h-12 px-3 sm:px-7 text-xs sm:text-sm font-medium rounded-xl border-border/80 bg-card/60 backdrop-blur-md hover:bg-muted/60 transition-all flex items-center justify-center",
               })}
             >
-              Explore Dashboard
+              Dashboard
             </MagneticButton>
           </motion.div>
 
           {/* Feature Highlights Trust Ticker */}
           <motion.div
             variants={itemVariants}
-            className="mt-8 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-xs text-muted-foreground/80 font-medium"
+            className="mt-4 sm:mt-8 flex flex-wrap items-center justify-center gap-y-1 gap-x-3 sm:gap-x-6 text-[10px] sm:text-xs text-muted-foreground/80 font-medium"
           >
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-              <span>Free tier included</span>
+            <div className="flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+              <span>Free tier</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5 text-blue-500" />
-              <span>SOC2 Type II isolation</span>
+            <div className="flex items-center gap-1">
+              <Shield className="h-3 w-3 text-blue-500" />
+              <span>SOC2 isolated</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Terminal className="h-3.5 w-3.5 text-purple-500" />
-              <span>Full build log streaming</span>
+            <div className="flex items-center gap-1">
+              <Terminal className="h-3 w-3 text-purple-500" />
+              <span>Build streaming</span>
             </div>
           </motion.div>
         </motion.div>

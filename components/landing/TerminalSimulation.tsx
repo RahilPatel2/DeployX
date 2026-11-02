@@ -50,31 +50,31 @@ export function TerminalSimulation({ onRestart }: { onRestart?: () => void }) {
   const isComplete = visibleCount >= STEPS.length;
 
   return (
-    <div className="font-mono text-xs sm:text-sm text-foreground space-y-3">
+    <div className="font-mono text-[11px] sm:text-xs text-foreground space-y-2 sm:space-y-3">
       {/* Terminal Toolbar */}
-      <div className="flex flex-wrap items-center justify-between pb-3 border-b border-border/40 gap-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between pb-2 sm:pb-3 border-b border-border/40 gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <span
-            className={`h-2.5 w-2.5 rounded-full ${
+            className={`h-2 sm:h-2.5 w-2 sm:w-2.5 rounded-full ${
               isComplete ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-amber-400 animate-pulse"
             }`}
           />
-          <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-            {isComplete ? "Deployment Complete" : "Pipeline Executing..."}
+          <span className="text-[10px] sm:text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+            {isComplete ? "Deploy Complete" : "Building..."}
           </span>
-          <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted/80 text-muted-foreground border border-border/50">
-            {visibleCount}/{STEPS.length} Steps
+          <span className="text-[9px] sm:text-[11px] px-1 sm:px-1.5 py-0.2 rounded bg-muted/80 text-muted-foreground border border-border/50">
+            {visibleCount}/{STEPS.length}
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5">
           <button
             onClick={() => setIsPaused(!isPaused)}
-            className="p-1 px-2 text-[11px] rounded bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 border border-border/40 cursor-pointer"
+            className="p-1 px-1.5 sm:px-2 text-[10px] sm:text-[11px] rounded bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 border border-border/40 cursor-pointer"
             title={isPaused ? "Resume simulation" : "Pause simulation"}
           >
-            {isPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
-            <span>{isPaused ? "Resume" : "Pause"}</span>
+            {isPaused ? <Play className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> : <Pause className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
+            <span className="hidden xs:inline">{isPaused ? "Resume" : "Pause"}</span>
           </button>
           {onRestart && (
             <button
@@ -82,18 +82,18 @@ export function TerminalSimulation({ onRestart }: { onRestart?: () => void }) {
                 setVisibleCount(1);
                 onRestart();
               }}
-              className="p-1 px-2 text-[11px] rounded bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 border border-border/40 cursor-pointer"
+              className="p-1 px-1.5 sm:px-2 text-[10px] sm:text-[11px] rounded bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 border border-border/40 cursor-pointer"
               title="Restart"
             >
-              <RotateCw className="h-3 w-3" />
-              <span>Replay</span>
+              <RotateCw className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              <span className="hidden xs:inline">Replay</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Terminal Body */}
-      <div className="space-y-2 py-2 min-h-[260px] max-h-[340px] overflow-y-auto pr-1 scrollbar-thin">
+      <div className="space-y-1.5 sm:space-y-2 py-1.5 sm:py-2 min-h-[140px] sm:min-h-[260px] max-h-[190px] sm:max-h-[340px] overflow-y-auto pr-1 scrollbar-thin">
         {STEPS.slice(0, visibleCount).map((step, idx) => (
           <motion.div
             key={step.id}

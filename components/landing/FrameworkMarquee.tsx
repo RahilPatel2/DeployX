@@ -26,10 +26,10 @@ export function FrameworkMarquee() {
   const reducedMotion = useSafeReducedMotion();
 
   return (
-    <div className="py-16 relative overflow-hidden border-y border-border/40 bg-muted/10 backdrop-blur-sm">
+    <div className="py-6 sm:py-14 relative overflow-hidden border-y border-border/40 bg-muted/10 backdrop-blur-sm">
       {/* Section Sub-header */}
-      <div className="text-center mb-8 px-4">
-        <p className="text-xs uppercase tracking-widest font-mono text-muted-foreground">
+      <div className="text-center mb-4 sm:mb-8 px-4">
+        <p className="text-[10px] sm:text-xs uppercase tracking-widest font-mono text-muted-foreground">
           Zero-Config Auto-Detection for Modern Frameworks
         </p>
       </div>

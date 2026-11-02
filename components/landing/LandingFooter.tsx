@@ -88,29 +88,29 @@ const FOOTER_COLUMNS: FooterColumn[] = [
 export function LandingFooter() {
   return (
     <footer className="relative border-t border-border/50 bg-card/40 backdrop-blur-xl z-20 text-muted-foreground text-xs">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 lg:py-20">
         
         {/* Main Footer Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12 pb-12 border-b border-border/40">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 sm:gap-8 lg:gap-12 pb-8 sm:pb-12 border-b border-border/40">
           
           {/* Brand Column */}
-          <div className="col-span-2 space-y-4">
+          <div className="col-span-2 space-y-3 sm:space-y-4">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="h-8 w-8 bg-foreground rounded-lg flex items-center justify-center transition-transform group-hover:scale-105 shadow-sm">
+              <div className="h-7 w-7 sm:h-8 sm:w-8 bg-foreground rounded-lg flex items-center justify-center transition-transform group-hover:scale-105 shadow-sm">
                 <span className="text-background font-extrabold text-xs">DX</span>
               </div>
-              <span className="font-extrabold text-base tracking-tight text-foreground">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight text-foreground">
                 DeployX
               </span>
             </Link>
 
-            <p className="text-xs text-muted-foreground max-w-sm leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-muted-foreground max-w-sm leading-relaxed">
               Autonomous continuous deployment platform powered by isolated build sandboxes and Cloudflare Pages edge delivery.
             </p>
 
             {/* Live Operational Beacon */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-mono">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] sm:text-[11px] font-mono">
+              <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>All Systems Operational (275+ PoPs)</span>
             </div>
           </div>

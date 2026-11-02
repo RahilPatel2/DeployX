@@ -91,37 +91,37 @@ function AnimatedCounter({ metric }: { metric: MetricItem }) {
   return (
     <motion.div
       variants={FADE_UP}
-      className="p-6 sm:p-8 rounded-3xl border border-border/70 bg-card/60 backdrop-blur-xl flex flex-col justify-between hover:border-primary/40 transition-all duration-300 shadow-sm hover:shadow-lg group"
+      className="p-3.5 sm:p-8 rounded-2xl sm:rounded-3xl border border-border/70 bg-card/60 backdrop-blur-xl flex flex-col justify-between hover:border-primary/40 transition-all duration-300 shadow-sm hover:shadow-lg group"
     >
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2.5 sm:mb-4">
           <div
-            className={`h-10 w-10 rounded-xl bg-gradient-to-br border flex items-center justify-center ${metric.color} group-hover:scale-110 transition-transform`}
+            className={`h-7 w-7 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-gradient-to-br border flex items-center justify-center ${metric.color} group-hover:scale-110 transition-transform`}
           >
-            <Icon className="h-5 w-5" />
+            <Icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
           </div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground px-2 py-0.5 rounded bg-muted/60">
+          <span className="text-[9px] sm:text-[10px] font-mono uppercase tracking-widest text-muted-foreground px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded bg-muted/60">
             METRIC
           </span>
         </div>
 
-        <div className="font-mono text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground tracking-tight flex items-baseline">
-          {metric.prefix && <span className="text-2xl sm:text-3xl text-muted-foreground mr-1">{metric.prefix}</span>}
+        <div className="font-mono text-xl sm:text-4xl lg:text-5xl font-extrabold text-foreground tracking-tight flex items-baseline">
+          {metric.prefix && <span className="text-sm sm:text-2xl lg:text-3xl text-muted-foreground mr-0.5 sm:mr-1">{metric.prefix}</span>}
           <span ref={ref}>{displayValue}</span>
-          <span className="text-2xl sm:text-3xl text-primary ml-0.5">{metric.suffix}</span>
+          <span className="text-base sm:text-2xl lg:text-3xl text-primary ml-0.5">{metric.suffix}</span>
         </div>
 
-        <h3 className="text-base font-bold text-foreground mt-3 group-hover:text-primary transition-colors">
+        <h3 className="text-xs sm:text-base font-bold text-foreground mt-1.5 sm:mt-3 group-hover:text-primary transition-colors line-clamp-1">
           {metric.label}
         </h3>
-        <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 leading-relaxed hidden sm:block">
           {metric.description}
         </p>
       </div>
 
-      <div className="mt-6 pt-4 border-t border-border/40 flex items-center gap-1.5 text-[11px] font-mono text-emerald-400">
+      <div className="mt-2.5 sm:mt-6 pt-2 sm:pt-4 border-t border-border/40 flex items-center gap-1 sm:gap-1.5 text-[9px] sm:text-[11px] font-mono text-emerald-400">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        <span>Live Telemetry Active</span>
+        <span className="truncate">Live Telemetry</span>
       </div>
     </motion.div>
   );
@@ -129,29 +129,29 @@ function AnimatedCounter({ metric }: { metric: MetricItem }) {
 
 export function MetricsSection() {
   return (
-    <section className="py-20 sm:py-28 relative">
+    <section className="py-10 sm:py-20 lg:py-28 relative">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+        <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-16">
+          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground">
             Proven Performance at{" "}
             <span className="bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
-              Production Scale
+              Scale
             </span>
           </h2>
-          <p className="mt-3 text-base text-muted-foreground">
+          <p className="mt-2 text-xs sm:text-base text-muted-foreground px-2">
             Trusted by developers shipping modern web applications with speed and reliability.
           </p>
         </div>
 
-        {/* 4 Metrics Grid */}
+        {/* 4 Metrics Grid: 2x2 on Mobile, 4-Cols on Desktop */}
         <motion.div
           variants={containerStagger(0.1)}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-60px" }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5"
         >
           {METRICS.map((metric) => (
             <AnimatedCounter key={metric.id} metric={metric} />

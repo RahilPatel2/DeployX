@@ -27,7 +27,7 @@ export default function Home() {
       {/* 3. Main Landing Content */}
       <main className="relative z-10 flex-1 w-full">
         {/* Hero Section Container */}
-        <div className="relative pt-8 sm:pt-16 pb-8 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative pt-2 sm:pt-16 pb-4 sm:pb-8 max-w-6xl mx-auto px-3 sm:px-6 lg:px-8">
           <FloatingBadges />
           <HeroSection />
           <LiveProductPreview />
